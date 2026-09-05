@@ -121,7 +121,7 @@ serves the landing page at `http://localhost:9875/chalk/` and the app at
 `http://localhost:9875/chalk/app/`, with the migration applied to a local
 database and the boards' objects stored under `.yard/dev/objects/app/`. The
 `authenticated` gate sends you to a persona picker instead of real sign-in;
-pick one up front with `yard dev --as signed-in` (Free), `--as customer:pro`,
+pick one up front with `yard dev --as signed-in` (Free), `--as user:pro`,
 `--as trial`, or `--as member` (the project owner).
 
 To see the realtime part, open the same board in two browser windows (a
@@ -182,11 +182,11 @@ shape at pen-up. The Usage page in the dashboard shows the month so far.
     yard service logs --since 2h
 
 Nothing serves a draft release, so pushing is safe to repeat as often as you
-like; the app only changes for customers at `yard releases publish`.
+like; the app only changes for users at `yard releases publish`.
 Migrations apply themselves at deploy; you never run them by hand.
 
 The project follows the `Production` channel and starts with no sandboxes. To
-publish somewhere customers can't see, create one, hold the storefront where
+publish somewhere users can't see, create one, hold the storefront where
 it is, and ship when it looks right:
 
     yard sandbox create preview
