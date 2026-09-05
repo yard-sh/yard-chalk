@@ -44,6 +44,14 @@ the object class it exports:
 `yard push` sends that file along with the bundles, so changing how the
 service deploys is an edit there followed by a push.
 
+The marketing page is declared on the same file:
+
+    "landing_page": { "type": "custom", "dir": "landing-page" }
+
+`"type": "custom"` is what serves the files in that directory. Set it to
+`"builtin"` and the project shows the pre-built page you edit in the
+dashboard instead; the files still upload, they are just not served.
+
 ## How it fits together
 
 **One board is one object.** `_service.js` exports a class called `Board`.
