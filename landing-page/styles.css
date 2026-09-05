@@ -1,0 +1,678 @@
+/* Chalk landing page.
+
+   The page is a whiteboard on a wall: matte white, a faint dot grid, one
+   marker colour, and sticky-note yellow. Everything else is ink on the
+   board. Colour appears where a marker would put it (the top rule, the
+   glyph, a stroke, a cursor) and nowhere else. */
+
+:root {
+  color-scheme: light dark;
+
+  --wall: #f6f7f8;        /* the page: the wall behind the board */
+  --board: #ffffff;       /* the whiteboard surface */
+  --raised: #ffffff;      /* a card on the wall */
+  --dot: #d6dbe1;         /* the dot grid on the board */
+  --ink: #15171a;         /* marker black */
+  --pencil: #5f656c;      /* second voice */
+  --faint: #979da5;       /* labels, counts */
+  --line: #e1e4e8;        /* structural hairlines */
+  --marker: #2a5bd7;      /* the one colour */
+  --marker-ink: #ffffff;
+  --sticky: #f8e47c;      /* sticky-note yellow */
+  --sticky-ink: #3a3410;
+
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --pad: clamp(20px, 5.5vw, 68px);
+  --wide: 1040px;
+  --r: 8px;
+
+  --lift: 0 16px 34px -14px rgba(20, 24, 26, 0.3), 0 2px 6px rgba(20, 24, 26, 0.07);
+  --note-shadow: 0 6px 14px -8px rgba(60, 50, 10, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --wall: #101215;
+    --board: #191c20;
+    --raised: #1f2327;
+    --dot: #2c3138;
+    --ink: #eceef0;
+    --pencil: #9aa0a7;
+    --faint: #6f757c;
+    --line: #262a2f;
+    --marker: #7c9cff;
+    --marker-ink: #0b1633;
+    --sticky: #e6cf5a;
+    --sticky-ink: #2c2708;
+
+    --lift: 0 18px 38px -14px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.5);
+    --note-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.7);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--wall);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--marker);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* The typed voice: labels, counts, captions, anything the system knows. */
+.label {
+  display: inline-block;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* --------------------------------------------------------------- the rules */
+
+.rule {
+  height: 1px;
+  background: var(--line);
+  transform-origin: left center;
+}
+
+/* A marker line across the top of the page: thicker than a hairline, with
+   the slightly soft ends a felt tip leaves. */
+.rule--marker {
+  height: 3px;
+  background: var(--marker);
+  border-radius: 2px;
+}
+
+/* ----------------------------------------------------------------- top bar */
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 18px var(--pad);
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* A sticky note with a marker tick on it. */
+.mark__glyph {
+  width: 15px;
+  height: 15px;
+  border-radius: 2px;
+  background: var(--sticky);
+  box-shadow: inset 0 -7px 0 -5px var(--marker);
+}
+
+/* -------------------------------------------------------------- the button */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 22px;
+  border: 1px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--ink);
+  color: var(--wall);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 550;
+  letter-spacing: -0.006em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.btn:hover {
+  opacity: 0.86;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn--sm {
+  padding: 8px 15px;
+  font-size: 13px;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.btn--ghost:hover {
+  opacity: 1;
+  border-color: var(--ink);
+}
+
+/* ------------------------------------------------------------------- shell */
+
+main {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0 var(--pad);
+}
+
+/* -------------------------------------------------------------------- hero */
+
+.hero {
+  padding: clamp(52px, 10vw, 104px) 0 clamp(40px, 6vw, 64px);
+}
+
+.hero h1 {
+  margin: 18px 0 clamp(26px, 4vw, 40px);
+  font-family: var(--mono);
+  font-size: clamp(2.15rem, 6.6vw, 4.6rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.055em;
+}
+
+.lede {
+  max-width: 42ch;
+  margin: clamp(22px, 3vw, 32px) 0 0;
+  font-size: clamp(1rem, 1.5vw, 1.16rem);
+  color: var(--pencil);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  margin-top: clamp(28px, 4vw, 38px);
+}
+
+.note {
+  font-size: 14px;
+  color: var(--faint);
+}
+
+/* --------------------------------------------------------------- the board */
+
+.demo {
+  padding-bottom: clamp(48px, 7vw, 80px);
+}
+
+.wb {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background-color: var(--board);
+  background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  overflow: hidden;
+  box-shadow: var(--lift);
+}
+
+.wb__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 56vh;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wb__tools {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.tool {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.tool:hover {
+  border-color: var(--ink);
+}
+
+.tool--quiet {
+  color: var(--pencil);
+}
+
+/* Marker strokes: round ends, no fill, the one colour. */
+.wb-stroke {
+  fill: none;
+  stroke: var(--marker);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wb-stroke--ink {
+  stroke: var(--ink);
+}
+
+.wb-note {
+  cursor: grab;
+}
+
+.wb-note.is-dragging {
+  cursor: grabbing;
+}
+
+.wb-note__paper {
+  fill: var(--sticky);
+  filter: drop-shadow(var(--note-shadow));
+}
+
+.wb-note__text {
+  fill: var(--sticky-ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.wb-cursor {
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.wb-cursor__arrow {
+  fill: var(--marker);
+  stroke: var(--board);
+  stroke-width: 1.2;
+}
+
+.wb-cursor__tag {
+  fill: var(--marker);
+}
+
+.wb-cursor__name {
+  fill: var(--marker-ink);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  color: var(--faint);
+}
+
+/* ------------------------------------------------------------------- facts */
+
+.facts {
+  padding-bottom: clamp(48px, 7vw, 84px);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px 40px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+
+.fact:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.fact p {
+  margin: 0;
+  max-width: 56ch;
+  font-size: 15px;
+  color: var(--pencil);
+}
+
+.fact .label {
+  padding-top: 3px;
+  color: var(--ink);
+}
+
+@media (min-width: 720px) {
+  .fact {
+    grid-template-columns: 210px minmax(0, 1fr);
+    padding: 26px 0;
+  }
+}
+
+/* ----------------------------------------------------------------- pricing */
+
+.pricing {
+  padding-bottom: clamp(48px, 7vw, 84px);
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 24px);
+  margin-top: 18px;
+}
+
+@media (max-width: 640px) {
+  .plans {
+    grid-template-columns: 1fr;
+  }
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 22px 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--raised);
+}
+
+/* The Pro card is the sticky note on the wall. */
+.plan--pro {
+  border-color: transparent;
+  background: var(--sticky);
+  color: var(--sticky-ink);
+  box-shadow: var(--note-shadow);
+}
+
+.plan--pro .label,
+.plan--pro .plan__blurb,
+.plan--pro .plan__billed {
+  color: var(--sticky-ink);
+  opacity: 0.72;
+}
+
+.plan__name {
+  color: var(--ink);
+}
+
+.plan__price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+}
+
+.plan__amount {
+  font-family: var(--mono);
+  font-size: clamp(1.9rem, 3.4vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan__per {
+  font-size: 14px;
+  color: var(--pencil);
+}
+
+.plan--pro .plan__per {
+  color: inherit;
+  opacity: 0.72;
+}
+
+.plan__billed {
+  margin: -6px 0 0;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.plan__blurb {
+  margin: 0;
+  font-size: 15px;
+  color: var(--pencil);
+}
+
+.plan__features {
+  margin: 4px 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 14.5px;
+}
+
+.plan__features li {
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+
+.plan--pro .plan__features li {
+  border-top-color: rgba(58, 52, 16, 0.18);
+}
+
+.plan__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.plan--pro .btn--ghost {
+  color: var(--sticky-ink);
+  border-color: rgba(58, 52, 16, 0.35);
+}
+
+.plan--pro .btn--ghost:hover {
+  border-color: var(--sticky-ink);
+}
+
+.plan__current {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* Monthly and yearly, drawn as a two-stop switch. */
+.toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(58, 52, 16, 0.12);
+}
+
+.toggle__opt {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.toggle__opt.is-on {
+  background: var(--sticky-ink);
+  color: var(--sticky);
+  opacity: 1;
+}
+
+.toggle__save {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.toggle__save:empty {
+  display: none;
+}
+
+.limits {
+  width: 100%;
+  margin-top: clamp(28px, 4vw, 40px);
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.limits caption {
+  text-align: left;
+  padding-bottom: 10px;
+}
+
+.limits th,
+.limits td {
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+  text-align: left;
+  font-weight: 400;
+}
+
+.limits thead th {
+  border-top: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.limits tbody th {
+  color: var(--pencil);
+}
+
+.limits td {
+  width: 22%;
+  font-variant-numeric: tabular-nums;
+}
+
+.limits tr:last-child th,
+.limits tr:last-child td {
+  border-bottom: 1px solid var(--line);
+}
+
+/* ------------------------------------------------------------------- close */
+
+.close {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px 28px;
+  padding-bottom: clamp(56px, 8vw, 96px);
+}
+
+.close__line {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: clamp(1.05rem, 2.1vw, 1.4rem);
+  letter-spacing: -0.03em;
+}
+
+/* -------------------------------------------------------------------- foot */
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 22px var(--pad) 44px;
+  border-top: 1px solid var(--line);
+}
+
+.foot a {
+  color: var(--pencil);
+}
+
+.foot__right {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+#release:empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ reveal */
+
+/* One sequence, on load: the board is written a line at a time. Base styles
+   are the finished state, so no-JS and reduced-motion both land on a
+   readable page. */
+.reveal {
+  animation: rise 0.62s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.rule.reveal {
+  animation-name: draw;
+}
+
+.reveal--1 { animation-delay: 0.06s; }
+.reveal--2 { animation-delay: 0.12s; }
+.reveal--3 { animation-delay: 0.18s; }
+.reveal--4 { animation-delay: 0.24s; }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+}
+
+@keyframes draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

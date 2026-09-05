@@ -1,0 +1,52 @@
+{
+  "version": 7,
+  "project_slug": "chalk",
+  "ignore_files": [],
+  "services": [
+    {
+      "dir": "app",
+      "name": "app",
+      "url": "/app",
+      "access": "authenticated",
+      "database_access": true,
+      "objects": [
+        {
+          "class": "Board",
+          "binding": "BOARDS"
+        }
+      ]
+    }
+  ],
+  "landing_page": {
+    "dir": "landing-page"
+  },
+  "pricing": {
+    "tiers": [
+      {
+        "name": "Free",
+        "price_cents": 0,
+        "is_default": true,
+        "pricing_model": "one_time",
+        "description": "Three boards, five people at once"
+      },
+      {
+        "name": "Pro",
+        "price_cents": 600,
+        "pricing_model": "subscription",
+        "yearly_discount_percent": 20,
+        "description": "For teams that live on the board",
+        "free_trial": {
+          "enabled": true,
+          "days": 14,
+          "requires_card": false
+        },
+        "features": [
+          "Unlimited boards",
+          "50 people on a board at once",
+          "5,000 shapes per board",
+          "Export any board to SVG"
+        ]
+      }
+    ]
+  }
+}

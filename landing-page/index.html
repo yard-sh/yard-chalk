@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Chalk: a shared whiteboard</title>
+  <meta name="description" content="A whiteboard everyone can draw on at the same time. Sticky notes, shapes, pen, and every cursor in the room. Sign in with Yard and start a board." />
+  <link rel="stylesheet" href="styles.css" />
+  <!--
+    Yard injects embed.js into every landing page it serves, hosted and under
+    yard dev. It exposes window.yard.project and wires [data-yard] text
+    bindings, [data-yard-when] visibility and [data-action] buttons. Bound
+    elements keep static copy underneath for fields the dashboard may leave
+    empty, and the pricing section is complete markup that pricing.js only
+    fills in, so the page reads the same before the helper arrives.
+  -->
+</head>
+<body>
+  <header class="bar">
+    <span class="mark">
+      <span class="mark__glyph" aria-hidden="true"></span>
+      Chalk
+    </span>
+    <!-- Relative links only: the page serves under /<slug>/ (and under
+         /<slug>/@<sandbox>/ in a sandbox), so "app/" is always this project's app. -->
+    <a class="btn btn--sm" href="app/">Open Chalk</a>
+  </header>
+
+  <div class="rule rule--marker" role="presentation"></div>
+
+  <main>
+    <section class="hero">
+      <p class="label reveal">Shared whiteboard</p>
+
+      <h1 class="reveal reveal--1">Same board,<br />everyone at once.</h1>
+
+      <div class="rule reveal reveal--2" role="presentation"></div>
+
+      <p class="lede reveal reveal--3" data-yard="tagline">
+        Sticky notes, shapes, a pen, and every cursor in the room. Send the
+        link and people are on the board the moment they sign in. Nothing
+        to install, nothing to host.
+      </p>
+
+      <div class="actions reveal reveal--4">
+        <a class="btn" data-yard-when="signed_out" href="app/">
+          Sign in with Yard
+        </a>
+        <a class="btn" data-yard-when="signed_in" href="app/">
+          Open your boards
+        </a>
+        <span class="note">Free for three boards. Pro for the rest.</span>
+      </div>
+    </section>
+
+    <!-- The argument for a whiteboard is a board you can draw on, with
+         someone else drawing too, so the demo is real rather than a picture. -->
+    <section class="demo">
+      <div class="wb" id="wb">
+        <svg class="wb__svg" id="wb-svg" viewBox="0 0 800 440" role="img" aria-label="A small whiteboard you can draw on">
+          <g id="wb-notes"></g>
+          <g id="wb-strokes"></g>
+          <g id="wb-cursor" class="wb-cursor" aria-hidden="true">
+            <path class="wb-cursor__arrow" d="M0 0 L0 15 L4 11 L7 17 L9.5 16 L6.5 10 L11.5 10 Z" />
+            <g transform="translate(13, 14)">
+              <rect class="wb-cursor__tag" x="0" y="0" width="38" height="18" rx="4" />
+              <text class="wb-cursor__name" x="19" y="12.5" text-anchor="middle">Sam</text>
+            </g>
+          </g>
+        </svg>
+        <div class="wb__tools">
+          <button type="button" class="tool" id="wb-note">Drop a note</button>
+          <button type="button" class="tool tool--quiet" id="wb-clear">Clear</button>
+        </div>
+      </div>
+      <p class="hint">Draw here. This one is real, it just forgets.</p>
+    </section>
+
+    <section class="facts">
+      <div class="fact">
+        <span class="label">Everyone at once</span>
+        <p>Every stroke, note and move shows up for everyone on the board as it happens, with a named cursor beside it. Pen lines appear while they are being drawn, not after.</p>
+      </div>
+      <div class="fact">
+        <span class="label">Yours until you share it</span>
+        <p>A board is private to the person who made it. Turn on link sharing and anyone signed in with the link joins as an editor, and the board shows up in their list too.</p>
+      </div>
+      <div class="fact">
+        <span class="label">Nothing to run</span>
+        <p>Boards live on Yard. Sign-in is handled by Yard, so Chalk never sees a password, and the board keeps its shapes whether or not anyone is looking at it.</p>
+      </div>
+    </section>
+
+    <section class="pricing" id="pricing">
+      <p class="label">Pricing</p>
+
+      <!-- Both columns are complete without JavaScript. pricing.js fills in
+           prices, features and tier ids from window.yard.project.tiers so
+           the page never carries a tier id of its own. -->
+      <div class="plans" id="plans">
+        <article class="plan" data-plan="Free">
+          <span class="label plan__name" data-name>Free</span>
+          <p class="plan__price">
+            <span class="plan__amount" data-amount>$0</span>
+          </p>
+          <p class="plan__blurb" data-blurb>Three boards, five people at once</p>
+          <ul class="plan__features" data-features>
+            <li>3 boards</li>
+            <li>5 people on a board at once</li>
+            <li>500 shapes per board</li>
+          </ul>
+          <a class="btn btn--ghost" href="app/">Sign in, it's free</a>
+        </article>
+
+        <article class="plan plan--pro" data-plan="Pro">
+          <span class="label plan__name" data-name>Pro</span>
+          <div class="toggle" id="interval" role="group" aria-label="Billing interval" hidden>
+            <button type="button" class="toggle__opt is-on" data-interval="monthly" aria-pressed="true">Monthly</button>
+            <button type="button" class="toggle__opt" data-interval="yearly" aria-pressed="false">Yearly <span class="toggle__save" data-save></span></button>
+          </div>
+          <p class="plan__price">
+            <span class="plan__amount" data-amount>$6</span>
+            <span class="plan__per" data-per>/ month</span>
+          </p>
+          <p class="plan__billed" data-billed hidden></p>
+          <p class="plan__blurb" data-blurb>For teams that live on the board</p>
+          <ul class="plan__features" data-features>
+            <li>Unlimited boards</li>
+            <li>50 people on a board</li>
+            <li>5,000 shapes per board</li>
+            <li>Export to SVG</li>
+          </ul>
+          <div class="plan__actions" data-yard-when="not_owned">
+            <button type="button" class="btn" data-action="checkout" data-interval="monthly" data-buy>Get Pro</button>
+            <button type="button" class="btn btn--ghost" data-action="trial" data-trial hidden>Start a 14-day trial</button>
+          </div>
+          <a class="btn" data-yard-when="owned" href="app/">Open Chalk</a>
+          <p class="plan__current" data-current hidden>This is your plan.</p>
+        </article>
+      </div>
+
+      <table class="limits">
+        <caption class="label">What each plan holds</caption>
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">Free</th>
+            <th scope="col">Pro</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Boards you own</th><td>3</td><td>Unlimited</td></tr>
+          <tr><th scope="row">People on a board at once</th><td>5</td><td>50</td></tr>
+          <tr><th scope="row">Shapes per board</th><td>500</td><td>5,000</td></tr>
+          <tr><th scope="row">Export a board as SVG</th><td>No</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+      <p class="hint">Board limits follow the plan of the person who made the board. Everyone they share it with gets the same room.</p>
+    </section>
+
+    <section class="close">
+      <p class="close__line">Nothing to set up. Sign in and draw.</p>
+      <a class="btn" href="app/">Open Chalk</a>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span class="label">Chalk · free to start</span>
+    <span class="label foot__right">
+      <span id="release" data-yard="latest_release.tag_name"></span>
+      Hosted on <a href="https://yard.sh">Yard</a>
+    </span>
+  </footer>
+
+  <script src="demo.js"></script>
+  <script src="pricing.js"></script>
+</body>
+</html>
