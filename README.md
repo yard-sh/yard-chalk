@@ -1,6 +1,8 @@
 # Chalk
 
-[**Create in Yard**](https://dash.yard.sh/projects?action=create&repo=https%3A%2F%2Fgithub.com%2Fyard-sh%2Fyard-chalk)
+<p align="center">
+<a href="https://dash.yard.sh/projects?action=create&repo=https%3A%2F%2Fgithub.com%2Fyard-sh%2Fyard-chalk"><img src="https://i.imgur.com/eRpMu2n.png" width="200"alt="Create in Yard" /></a>
+</p>
 
 A shared whiteboard hosted end to end on Yard: sticky notes, shapes, a pen,
 and everyone's cursor on the same board at the same time. A static frontend,
