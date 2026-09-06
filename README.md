@@ -49,7 +49,7 @@ The marketing page is declared on the same file:
     "landing_page": { "type": "custom", "dir": "landing-page" }
 
 `"type": "custom"` is what serves the files in that directory. Set it to
-`"builtin"` and the project shows the pre-built page you edit in the
+`"default"` and the project shows the default page you edit in the
 dashboard instead; the files still upload, they are just not served.
 
 ## How it fits together
