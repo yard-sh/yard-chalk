@@ -7,7 +7,8 @@
 A shared whiteboard hosted end to end on Yard: sticky notes, shapes, a pen,
 and everyone's cursor on the same board at the same time. A static frontend,
 a fetch-handler backend, one realtime object per board, a per-project SQLite
-database, and buyer sign-in. Free for three boards; Pro is a subscription.
+database, and Yard Auth for sign-in. Free for three boards; Pro is a
+subscription.
 
 - Product page: https://tatelax.yard.sh/chalk
 - App: https://tatelax.yard.sh/chalk/app/
@@ -92,8 +93,9 @@ owner's snapshot when someone connects. Board limits (boards owned, people
 at once, shapes) follow the owner; export follows the person exporting.
 `owner` and `trial` entitlements count as Pro.
 
-**Sign in first, then connect.** The service is `authenticated`, and the
-edge answers an anonymous upgrade with a redirect a browser socket cannot
+**Sign in first, then connect.** The service is `authenticated`, so Yard Auth
+signs visitors in (a consent screen the first time, silent after that), and
+the edge answers an anonymous upgrade with a redirect a browser socket cannot
 follow. The app loads as a page, which is where sign-in happens, and only
 opens the socket after `api/me` succeeds.
 
@@ -130,7 +132,7 @@ the app re-reads `api/me` whenever the window regains focus.
 serves the landing page at `http://localhost:9875/chalk/` and the app at
 `http://localhost:9875/chalk/app/`, with the migration applied to a local
 database and the boards' objects stored under `.yard/dev/objects/app/`. The
-`authenticated` gate sends you to a persona picker instead of real sign-in;
+`authenticated` gate sends you to a persona picker instead of Yard Auth;
 pick one up front with `yard dev --as signed-in` (Free), `--as user:pro`,
 `--as trial`, or `--as member` (the project owner).
 
