@@ -70,6 +70,15 @@ export function createBoard(svg, editor, options) {
   const measure = document.createElement("canvas").getContext("2d");
   const family = getComputedStyle(svg).fontFamily || "sans-serif";
 
+  // Text is wrapped with canvas measurements in the page's font. The web
+  // font can arrive after the first shapes render, so lay them out again
+  // once it has; until then the fallback font's metrics are used.
+  if (document.fonts) {
+    document.fonts.ready.then(() => {
+      for (const shape of shapes.values()) renderShape(shape);
+    });
+  }
+
   /* -------------------------------------------------------------- view */
 
   function applyView() {

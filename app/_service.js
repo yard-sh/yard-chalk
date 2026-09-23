@@ -918,13 +918,14 @@ function color(value, fallback) {
 
 // A plain SVG of the board, drawn server-side from the same shape records the
 // canvas renders. Colours are the light theme's.
+// Keep in step with the --fill-* and --stroke-* tokens in styles.css.
 const FILL = {
-  yellow: "#fde68a", pink: "#fbcfe8", blue: "#bfdbfe", green: "#bbf7d0",
-  orange: "#fed7aa", purple: "#ddd6fe", grey: "#e5e7eb", ink: "#1f2937",
+  yellow: "#ffe066", pink: "#ffb3cf", blue: "#b4c2ff", green: "#9ee6c8",
+  orange: "#ffc49a", purple: "#d4c4ff", grey: "#e3e4ec", ink: "#0e0f2c",
 };
 const STROKE = {
-  yellow: "#ca8a04", pink: "#db2777", blue: "#2563eb", green: "#16a34a",
-  orange: "#ea580c", purple: "#7c3aed", grey: "#6b7280", ink: "#1f2937",
+  yellow: "#e0a800", pink: "#f0428a", blue: "#3346ff", green: "#0fa877",
+  orange: "#f26b1d", purple: "#7c5cff", grey: "#7d8099", ink: "#0e0f2c",
 };
 
 function shapesToSVG(shapes) {
@@ -942,9 +943,9 @@ function shapesToSVG(shapes) {
   const vb = [minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2].map((n) => Math.round(n));
   const parts = shapes.map(shapeToSVG).filter(Boolean);
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(" ")}" width="${vb[2]}" height="${vb[3]}" font-family="ui-sans-serif, system-ui, sans-serif">\n` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(" ")}" width="${vb[2]}" height="${vb[3]}" font-family="Figtree, ui-sans-serif, system-ui, sans-serif">\n` +
     `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>\n` +
-    `<rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="#fcfcfb"/>\n` +
+    `<rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="#fbfbfd"/>\n` +
     parts.join("\n") +
     "\n</svg>\n"
   );
@@ -956,11 +957,11 @@ function shapeToSVG(s) {
   const stroke = STROKE[p.color] || STROKE.ink;
   switch (s.kind) {
     case "note":
-      return `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="6" fill="${fill}"/>` + wrappedText(p.text, s.x + 14, s.y + 14, s.w - 28, 18, "#1f2937", "start");
+      return `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="6" fill="${fill}"/>` + wrappedText(p.text, s.x + 14, s.y + 14, s.w - 28, 18, "#0e0f2c", "start");
     case "rect":
-      return `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="4" fill="${fill}" fill-opacity="0.35" stroke="${stroke}" stroke-width="2"/>` + wrappedText(p.text, s.x + s.w / 2, s.y + s.h / 2, s.w - 20, 18, "#1f2937", "middle");
+      return `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="4" fill="${fill}" fill-opacity="0.35" stroke="${stroke}" stroke-width="2"/>` + wrappedText(p.text, s.x + s.w / 2, s.y + s.h / 2, s.w - 20, 18, "#0e0f2c", "middle");
     case "ellipse":
-      return `<ellipse cx="${s.x + s.w / 2}" cy="${s.y + s.h / 2}" rx="${s.w / 2}" ry="${s.h / 2}" fill="${fill}" fill-opacity="0.35" stroke="${stroke}" stroke-width="2"/>` + wrappedText(p.text, s.x + s.w / 2, s.y + s.h / 2, s.w * 0.7, 18, "#1f2937", "middle");
+      return `<ellipse cx="${s.x + s.w / 2}" cy="${s.y + s.h / 2}" rx="${s.w / 2}" ry="${s.h / 2}" fill="${fill}" fill-opacity="0.35" stroke="${stroke}" stroke-width="2"/>` + wrappedText(p.text, s.x + s.w / 2, s.y + s.h / 2, s.w * 0.7, 18, "#0e0f2c", "middle");
     case "line":
       return `<line x1="${s.x}" y1="${s.y}" x2="${p.x2}" y2="${p.y2}" stroke="${stroke}" stroke-width="2" stroke-linecap="round"${p.arrow ? ' marker-end="url(#arrow)"' : ""}/>`;
     case "pen": {

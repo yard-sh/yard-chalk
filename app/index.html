@@ -7,6 +7,9 @@
     <title>Chalk</title>
     <!-- Relative URLs only: the app serves under /<slug>/app/, so a
          root-absolute /styles.css would resolve against the DOMAIN root. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" />
     <link rel="stylesheet" href="styles.css" />
     <script>
       // Apply the saved theme before first paint so there is no flash.
@@ -22,16 +25,16 @@
     <header class="topbar">
       <div class="topbar__group">
         <a class="wordmark" href="#" title="All boards">
-          <span class="wordmark__mark" aria-hidden="true"></span>
+          <span class="wordmark__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           Chalk
         </a>
         <input class="boardname" id="board-name" value="" readonly maxlength="80" aria-label="Board name" hidden />
-        <span class="status mono onboard" id="status" data-status="offline" role="status">Offline</span>
+        <span class="status small onboard" id="status" data-status="offline" role="status">Offline</span>
       </div>
 
       <div class="topbar__group">
         <div class="presence onboard" id="presence" aria-live="polite"></div>
-        <button class="button button--sm onboard" id="share-button">Share</button>
+        <button class="button button--sm button--primary onboard" id="share-button">Share</button>
         <button class="button button--sm onboard" id="export-button">Export</button>
         <button class="iconbutton" id="theme-toggle" title="Switch theme" aria-label="Switch theme">
           <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -45,10 +48,10 @@
         <div class="account" id="account">
           <button class="account__button" id="account-button" aria-haspopup="true" aria-expanded="false" aria-label="Account"></button>
           <div class="menu menu--right" id="account-menu" hidden>
-            <label class="menu__label mono eyebrow" for="name-input">Your name on the board</label>
+            <label class="menu__label eyebrow" for="name-input">Your name on the board</label>
             <input class="menu__input" id="name-input" maxlength="40" />
             <div class="menu__row">
-              <span class="badge mono" id="plan-badge" data-plan="free">Free</span>
+              <span class="badge small" id="plan-badge" data-plan="free">Free</span>
               <span class="menu__email" id="account-email"></span>
             </div>
             <div class="menu__rule"></div>
@@ -63,7 +66,7 @@
     <section class="boards" id="boards" hidden>
       <div class="boards__head">
         <h1 class="boards__title">Your boards</h1>
-        <button class="button" id="new-board">New board</button>
+        <button class="button button--primary" id="new-board">New board</button>
       </div>
       <div class="boards__list" id="board-list"></div>
     </section>
@@ -121,7 +124,7 @@
         <button class="tool" id="zoom-in" title="Zoom in (+)" aria-label="Zoom in">
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
         </button>
-        <button class="zoom mono" id="zoom" title="Zoom to fit (1)">100%</button>
+        <button class="zoom small" id="zoom" title="Zoom to fit (1)">100%</button>
         <button class="tool" id="zoom-out" title="Zoom out (-)" aria-label="Zoom out">
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
         </button>
@@ -135,7 +138,7 @@
       <div class="sheet__scrim" data-close></div>
       <div class="sheet__panel" role="dialog" aria-modal="true" aria-label="Share this board">
         <div class="sheet__head">
-          <span class="mono eyebrow">Share</span>
+          <span class="kicker kicker--blue">Share</span>
           <button class="iconbutton" data-close aria-label="Close">
             <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
           </button>
@@ -146,7 +149,7 @@
         </label>
         <p class="sheet__note" id="share-note"></p>
         <div class="linkrow">
-          <input class="linkrow__field mono" id="share-link" readonly aria-label="Board link" />
+          <input class="linkrow__field small" id="share-link" readonly aria-label="Board link" />
           <button class="button" id="share-copy">Copy link</button>
         </div>
         <p class="sheet__note">People still sign in with Yard, so every cursor has a name.</p>
@@ -157,7 +160,7 @@
       <div class="sheet__scrim" data-close></div>
       <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="plan-title">
         <div class="sheet__head">
-          <span class="mono eyebrow">Plan</span>
+          <span class="kicker kicker--yellow">Plan</span>
           <button class="iconbutton" data-close aria-label="Close">
             <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
           </button>

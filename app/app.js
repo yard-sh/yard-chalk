@@ -382,7 +382,7 @@ function renderPresence() {
     presenceEl.append(dot);
   }
   if (people.length > shown.length) {
-    presenceEl.append(el("span", "avatar avatar--more mono", "+" + (people.length - shown.length)));
+    presenceEl.append(el("span", "avatar avatar--more small", "+" + (people.length - shown.length)));
   }
   presenceEl.setAttribute("aria-label", people.length + " on this board");
 }
@@ -603,14 +603,15 @@ function renderList() {
     boardListEl.append(el("p", "boards__empty", "No boards yet. Make one."));
     return;
   }
-  for (const b of state.boards) {
+  for (const [i, b] of state.boards.entries()) {
     const card = el("article", "bcard");
+    card.dataset.tint = String(i % 6);
     const open = document.createElement("a");
     open.className = "bcard__open";
     open.href = "#" + b.id;
     open.append(el("span", "bcard__name", b.name));
     const shapes = b.shape_count === 1 ? "1 shape" : b.shape_count + " shapes";
-    open.append(el("span", "bcard__meta mono", b.role + " · " + shapes + " · " + ago(b.updated_at)));
+    open.append(el("span", "bcard__meta small", b.role + " · " + shapes + " · " + ago(b.updated_at)));
     card.append(open);
 
     const actions = el("div", "bcard__actions");
