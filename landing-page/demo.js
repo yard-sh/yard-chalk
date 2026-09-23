@@ -20,7 +20,10 @@
   var NOTE_H = 96;
   var MAX_STROKES = 200;
   var NOTE_TEXT = ["Ship it Friday", "Ask Sam", "Kickoff at 10", "Needs a name", "Fix the copy", "Try the blue one"];
+  var NOTE_COLORS = ["yellow", "pink", "green", "blue", "orange"];
   var nextText = 0;
+  var nextColor = 0;
+  var ink = "ink"; // the visitor's pen colour, picked in the dock
 
   function el(name, attrs, parent) {
     var node = document.createElementNS(NS, name);
@@ -62,9 +65,10 @@
     return lines.slice(0, 3);
   }
 
-  function addNote(x, y, text) {
-    var g = el("g", { class: "wb-note", transform: "translate(" + x + "," + y + ")" }, notes);
-    el("rect", { class: "wb-note__paper", width: NOTE_W, height: NOTE_H, rx: 3 }, g);
+  function addNote(x, y, text, color) {
+    color = color || NOTE_COLORS[nextColor++ % NOTE_COLORS.length];
+    var g = el("g", { class: "wb-note wb-note--" + color, transform: "translate(" + x + "," + y + ")" }, notes);
+    el("rect", { class: "wb-note__paper", width: NOTE_W, height: NOTE_H, rx: 6 }, g);
     var label = el("text", { class: "wb-note__text", x: 12, y: 26 }, g);
     wrap(text).forEach(function (line, i) {
       var span = el("tspan", { x: 12, dy: i ? 20 : 0 }, label);
@@ -121,7 +125,7 @@
       notes.appendChild(note);
       hand = { kind: "note", pointerId: event.pointerId, note: note, dx: p.x - note._x, dy: p.y - note._y };
     } else {
-      var path = startStroke("wb-stroke--ink");
+      var path = startStroke("wb-stroke--" + ink);
       extendStroke(path, p.x, p.y);
       hand = { kind: "pen", pointerId: event.pointerId, path: path };
     }
@@ -158,6 +162,18 @@
 
   document.getElementById("wb-note").addEventListener("click", function () {
     dropNote();
+  });
+
+  var swatches = document.querySelectorAll("[data-ink]");
+  Array.prototype.forEach.call(swatches, function (swatch) {
+    swatch.addEventListener("click", function () {
+      ink = swatch.dataset.ink;
+      Array.prototype.forEach.call(swatches, function (other) {
+        var on = other === swatch;
+        other.classList.toggle("is-on", on);
+        other.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    });
   });
 
   document.getElementById("wb-clear").addEventListener("click", function () {
@@ -323,8 +339,9 @@
 
   /* ----------------------------------------------------------------- seed */
 
-  addNote(96, 78, "Kickoff at 10");
-  addNote(316, 210, "Sam: bring the sketches");
+  addNote(110, 70, "Kickoff at 10", "yellow");
+  addNote(316, 210, "Sam: bring the sketches", "pink");
+  addNote(560, 60, "Try the blue one", "blue");
   var seedArrow = startStroke("");
   [[248, 128], [290, 170], [318, 206]].forEach(function (p) { extendStroke(seedArrow, p[0], p[1]); });
   placeCursor(W * 0.7, H * 0.3);

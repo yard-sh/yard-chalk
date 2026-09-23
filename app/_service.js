@@ -17,6 +17,8 @@
 const PRO_TIER = "Pro";
 
 // Board limits follow the board owner's plan. Export follows the exporter's.
+// The client reads these from api/me (Infinity serializes as null, which it
+// shows as "unlimited"), so the numbers live here and nowhere else.
 const LIMITS = {
   free: { boards: 3, live: 5, shapes: 500 },
   pro: { boards: Infinity, live: 50, shapes: 5000 },
@@ -84,18 +86,22 @@ async function handleAPI(request, env, url) {
     return json({ error: "sign in to use Chalk" }, 401);
   }
 
+  // Every request refreshes the caller's plan snapshot, so an upgrade,
+  // cancellation or expired trial reaches their boards on their next call.
+  const me = await ensureUser(env, request.headers, user);
+
   // ["api", "boards", "<id>", "ws"]: the leading "api" is dropped.
   const [, ...seg] = url.pathname.split("/").filter(Boolean);
 
   if (seg[0] === "me" && seg.length === 1) {
-    if (method === "GET") return getMe(request, env, user);
-    if (method === "PATCH") return renameMe(request, env, user);
+    if (method === "GET") return json(me);
+    if (method === "PATCH") return renameMe(request, env, me);
     return methodNotAllowed();
   }
 
   if (seg[0] === "boards" && seg.length === 1) {
-    if (method === "GET") return listBoards(request, env, user);
-    if (method === "POST") return createBoard(request, env, user);
+    if (method === "GET") return listBoards(env, me);
+    if (method === "POST") return createBoard(request, env, me);
     return methodNotAllowed();
   }
 
@@ -112,8 +118,8 @@ async function handleAPI(request, env, url) {
       const action = seg[2];
       if (action === "join" && method === "POST") return joinBoard(env, user, access);
       if (action === "leave" && method === "POST") return leaveBoard(env, user, access);
-      if (action === "export.svg" && method === "GET") return exportBoard(request, env, access);
-      if (action === "ws" && method === "GET") return connectBoard(request, env, user, access);
+      if (action === "export.svg" && method === "GET") return exportBoard(env, me, access);
+      if (action === "ws" && method === "GET") return connectBoard(request, env, me, access);
     }
     return json({ error: "not found" }, 404);
   }
@@ -123,34 +129,41 @@ async function handleAPI(request, env, url) {
 
 /* -------------------------------------------------------------- identity */
 
-// pro for the project owner, a trial, or a Pro purchase. X-Yard-Tier is the
-// purchased tier's name and is absent on Free, so a missing header is Free.
+// Pro is the project owner, or a live purchase, subscription or trial of the
+// tier named PRO_TIER. The tier is checked for trials too, so a trial added
+// to some other tier later never unlocks Pro. Anything else, including a
+// signed-in visitor with no purchase at all, is Free. Renaming the Pro tier
+// in .yard/settings.json means renaming PRO_TIER with it.
 function planOf(headers) {
   const entitlement = headers.get("X-Yard-Entitlement") || "none";
-  if (entitlement === "owner" || entitlement === "trial") return "pro";
+  if (entitlement === "owner") return "pro";
+  if (entitlement !== "active" && entitlement !== "trial") return "free";
   return headers.get("X-Yard-Tier") === PRO_TIER ? "pro" : "free";
 }
 
 // There is no display-name header, so the first visit derives one from the
 // email and the app lets people change it. The plan is re-snapshotted on
-// every visit: that snapshot is what a board reads for its owner's limits.
+// every request: that snapshot is what a board reads for its owner's limits
+// while the owner is away.
 async function ensureUser(env, headers, user) {
   const email = headers.get("X-Yard-Email") || "";
+  const entitlement = headers.get("X-Yard-Entitlement") || "none";
   const plan = planOf(headers);
-  await env.DB.prepare(
+  const row = await env.DB.prepare(
     "INSERT INTO users (id, name, email, plan, seen_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))" +
-      " ON CONFLICT(id) DO UPDATE SET email = excluded.email, plan = excluded.plan, seen_at = excluded.seen_at",
+      " ON CONFLICT(id) DO UPDATE SET email = excluded.email, plan = excluded.plan, seen_at = excluded.seen_at" +
+      " RETURNING name",
   )
     .bind(user, defaultName(user, email), email, plan)
-    .run();
-  const row = await env.DB.prepare("SELECT name FROM users WHERE id = ?1").bind(user).first();
+    .first();
   return {
     user_id: user,
-    name: row ? row.name : defaultName(user, email),
+    name: row.name,
     email,
     plan,
-    entitlement: headers.get("X-Yard-Entitlement") || "none",
+    entitlement,
     tier: headers.get("X-Yard-Tier") || "",
+    limits: LIMITS,
   };
 }
 
@@ -159,19 +172,12 @@ function defaultName(user, email) {
   return local || "user-" + shortId(user);
 }
 
-async function getMe(request, env, user) {
-  const me = await ensureUser(env, request.headers, user);
-  log("me.update", { user: shortId(user), plan: me.plan, entitlement: me.entitlement });
-  return json(me);
-}
-
-async function renameMe(request, env, user) {
+async function renameMe(request, env, me) {
   const { name } = await readJSON(request);
   const clean = text(name, MAX_NAME);
   if (!clean) return json({ error: "pick a name" }, 400);
-  const me = await ensureUser(env, request.headers, user);
-  await env.DB.prepare("UPDATE users SET name = ?1 WHERE id = ?2").bind(clean, user).run();
-  log("me.rename", { user: shortId(user), nameLen: clean.length });
+  await env.DB.prepare("UPDATE users SET name = ?1 WHERE id = ?2").bind(clean, me.user_id).run();
+  log("me.rename", { user: shortId(me.user_id), nameLen: clean.length });
   return json({ ...me, name: clean });
 }
 
@@ -180,20 +186,23 @@ async function renameMe(request, env, user) {
 const BOARD_COLUMNS =
   "b.id, b.owner_id, b.name, b.link_access, b.shape_count, b.created_at, b.updated_at";
 
-async function listBoards(request, env, user) {
-  let boards = await allBoards(env, user);
+async function listBoards(env, me) {
+  let boards = await allBoards(env, me.user_id);
   if (boards.length === 0) {
-    await seedBoard(request, env, user);
-    boards = await allBoards(env, user);
+    await seedBoard(env, me.user_id);
+    boards = await allBoards(env, me.user_id);
   }
   return json(boards);
 }
 
+// A member's boards only list while the owner keeps link sharing on; the
+// same rule as boardAccess, so the list never shows a board that won't open.
 async function allBoards(env, user) {
   const { results } = await env.DB.prepare(
     `SELECT ${BOARD_COLUMNS}, CASE WHEN b.owner_id = ?1 THEN 'owner' ELSE 'editor' END AS role` +
       " FROM boards b" +
-      " WHERE b.owner_id = ?1 OR b.id IN (SELECT board_id FROM board_members WHERE user_id = ?1)" +
+      " WHERE b.owner_id = ?1" +
+      " OR (b.link_access = 1 AND b.id IN (SELECT board_id FROM board_members WHERE user_id = ?1))" +
       " ORDER BY b.updated_at DESC, b.created_at DESC",
   )
     .bind(user)
@@ -203,7 +212,7 @@ async function allBoards(env, user) {
 
 // First visit: a board with two notes, so nobody lands on an empty canvas.
 // The row goes to the database; the notes go to the board's object.
-async function seedBoard(request, env, user) {
+async function seedBoard(env, user) {
   const id = crypto.randomUUID();
   await env.DB.prepare("INSERT INTO boards (id, owner_id, name) VALUES (?1, ?2, ?3)")
     .bind(id, user, "My first board")
@@ -212,7 +221,7 @@ async function seedBoard(request, env, user) {
     note("seed-welcome", 120, 120, "yellow", "Welcome to your first board. Drag this note around: everyone here sees it move."),
     note("seed-share", 400, 180, "pink", "Share the board from the top bar. Anyone with the link can draw with you."),
   ];
-  const res = await internal(env, id, "POST", "/__seed", { shapes, plan: planOf(request.headers) });
+  const res = await internal(env, id, "POST", "/__seed", { shapes });
   log("board.seed", { user: shortId(user), board: shortId(id), notes: shapes.length, ok: res.ok });
   return id;
 }
@@ -221,12 +230,13 @@ function note(id, x, y, color, body) {
   return { id, kind: "note", x, y, w: 220, h: 220, z: 1, props: { text: body, color } };
 }
 
-async function createBoard(request, env, user) {
+async function createBoard(request, env, me) {
   const { name } = await readJSON(request);
   const clean = text(name, MAX_BOARD_NAME);
   if (!clean) return json({ error: "name your board" }, 400);
 
-  const plan = planOf(request.headers);
+  const user = me.user_id;
+  const plan = me.plan;
   const owned = await env.DB.prepare("SELECT COUNT(*) AS n FROM boards WHERE owner_id = ?1")
     .bind(user)
     .first();
@@ -234,7 +244,7 @@ async function createBoard(request, env, user) {
     log("boards.limit", { user: shortId(user), plan, owned: owned.n });
     return json(
       { error: `Free holds ${LIMITS.free.boards} boards. Pro has no limit.`, code: "boards_limit", limit: LIMITS[plan].boards },
-      400,
+      403,
     );
   }
 
@@ -249,10 +259,13 @@ async function createBoard(request, env, user) {
 
 // Every board route starts here. role is "" for a signed-in visitor who is
 // neither the owner nor a member, which only join (via the link) may change.
+// Membership only counts while link sharing is on: turning it off shuts
+// everyone but the owner out, and turning it back on lets them back in.
 async function boardAccess(env, user, boardId) {
   const row = await env.DB.prepare(
     `SELECT ${BOARD_COLUMNS},` +
-      " CASE WHEN b.owner_id = ?2 THEN 'owner' WHEN m.user_id IS NOT NULL THEN 'editor' ELSE '' END AS role" +
+      " CASE WHEN b.owner_id = ?2 THEN 'owner'" +
+      " WHEN m.user_id IS NOT NULL AND b.link_access = 1 THEN 'editor' ELSE '' END AS role" +
       " FROM boards b LEFT JOIN board_members m ON m.board_id = b.id AND m.user_id = ?2" +
       " WHERE b.id = ?1",
   )
@@ -293,7 +306,8 @@ async function updateBoard(request, env, access) {
   await env.DB.prepare("UPDATE boards SET name = ?1, link_access = ?2 WHERE id = ?3")
     .bind(name, link ? 1 : 0, board.id)
     .run();
-  // Whoever is on the board right now hears about it through the object.
+  // Whoever is on the board right now hears about it through the object,
+  // which also closes every editor's socket when sharing goes off.
   await internal(env, board.id, "POST", "/__board", { name, link_access: link });
 
   if (patch.name !== undefined) log("board.rename", { board: shortId(board.id), nameLen: name.length });
@@ -326,12 +340,11 @@ async function leaveBoard(env, user, access) {
   return json({ ok: true });
 }
 
-async function exportBoard(request, env, access) {
+async function exportBoard(env, me, access) {
   const { board, role } = access;
   if (!role) return json({ error: "this board is not shared", code: "not_shared" }, 403);
-  const plan = planOf(request.headers);
-  if (plan !== "pro") {
-    log("export.denied", { board: shortId(board.id), plan });
+  if (me.plan !== "pro") {
+    log("export.denied", { board: shortId(board.id), plan: me.plan });
     return json({ error: "Export is part of Pro.", code: "pro_required" }, 403);
   }
   const res = await internal(env, board.id, "GET", "/__shapes");
@@ -353,8 +366,9 @@ async function exportBoard(request, env, access) {
 // upgrade to the board's object. The X-Chalk-* headers are set here, after
 // stripping anything a client sent, so the object can trust them the way it
 // trusts X-Yard-*.
-async function connectBoard(request, env, user, access) {
+async function connectBoard(request, env, me, access) {
   const { board, role } = access;
+  const user = me.user_id;
   if (!role) {
     log("ws.rejected", { user: shortId(user), board: shortId(board.id), reason: "not-shared" });
     return json({ error: "this board is not shared", code: "not_shared" }, 403);
@@ -363,12 +377,13 @@ async function connectBoard(request, env, user, access) {
     return json({ error: "expected a WebSocket" }, 426);
   }
 
-  const [owner, me] = await Promise.all([
-    env.DB.prepare("SELECT plan FROM users WHERE id = ?1").bind(board.owner_id).first(),
-    env.DB.prepare("SELECT name FROM users WHERE id = ?1").bind(user).first(),
-  ]);
-  const ownerPlan = owner && owner.plan === "pro" ? "pro" : "free";
-  const name = me ? me.name : defaultName(user, request.headers.get("X-Yard-Email") || "");
+  // The owner's own plan is live from the edge; anyone else reads the
+  // snapshot from the owner's last request.
+  let ownerPlan = me.plan;
+  if (role !== "owner") {
+    const owner = await env.DB.prepare("SELECT plan FROM users WHERE id = ?1").bind(board.owner_id).first();
+    ownerPlan = owner && owner.plan === "pro" ? "pro" : "free";
+  }
 
   const headers = new Headers(request.headers);
   for (const key of [...headers.keys()]) {
@@ -378,7 +393,7 @@ async function connectBoard(request, env, user, access) {
   headers.set("X-Chalk-Board-Name", encodeURIComponent(board.name));
   headers.set("X-Chalk-Link", board.link_access ? "1" : "0");
   headers.set("X-Chalk-Plan", ownerPlan);
-  headers.set("X-Chalk-Name", encodeURIComponent(name));
+  headers.set("X-Chalk-Name", encodeURIComponent(me.name));
   headers.set("X-Chalk-Role", role);
 
   log("ws.forward", { user: shortId(user), board: shortId(board.id), role, ownerPlan });
@@ -473,7 +488,6 @@ export class Board {
     this.meta.board = boardId || this.meta.board;
     this.meta.name = decodeURIComponent(h.get("X-Chalk-Board-Name") || "") || this.meta.name;
     this.meta.link = h.get("X-Chalk-Link") === "1";
-    this.meta.plan = plan;
 
     const pair = new WebSocketPair();
     const client = pair[0];
@@ -663,10 +677,9 @@ export class Board {
     log("peer.rename", { board: shortId(this.meta.board), cid: me.cid, nameLen: name.length });
   }
 
-  // Edits mark the board dirty and arm one alarm; the alarm writes a summary
+  // Each edit arms one alarm if none is pending; the alarm writes a summary
   // row to the database. One write per burst instead of one per message.
   async touched() {
-    this.meta.dirty = true;
     await this.saveMeta();
     if ((await this.ctx.storage.getAlarm()) === null) {
       await this.ctx.storage.setAlarm(Date.now() + FLUSH_MS);
@@ -683,8 +696,6 @@ export class Board {
         .bind(shapes, this.meta.board)
         .run();
     }
-    this.meta.dirty = false;
-    await this.saveMeta();
     log("flush", { board: shortId(this.meta.board), shapes, ms: Date.now() - started });
   }
 
@@ -712,7 +723,25 @@ export class Board {
     if (body.link_access !== undefined) this.meta.link = !!body.link_access;
     await this.saveMeta();
     this.broadcast({ t: "board", name: this.meta.name, link_access: this.meta.link });
+    if (!this.meta.link) this.closeEditors();
     return json({ ok: true });
+  }
+
+  // Sharing went off: everyone but the owner loses access now, not on their
+  // next reconnect. 4003 tells the client there is nothing to reconnect to.
+  closeEditors() {
+    let closed = 0;
+    for (const socket of this.ctx.getWebSockets()) {
+      const peer = attachment(socket);
+      if (!peer || peer.role === "owner") continue;
+      try {
+        socket.close(4003, "Sharing turned off");
+        closed += 1;
+      } catch {
+        // Already gone.
+      }
+    }
+    if (closed) log("board.unshared", { board: shortId(this.meta.board), closed });
   }
 
   async destroy() {
@@ -778,7 +807,7 @@ export class Board {
 }
 
 function freshMeta() {
-  return { board: "", name: "", link: false, plan: "free", owner: "", seq: 0, dirty: false, nextColor: 0 };
+  return { board: "", name: "", link: false, owner: "", seq: 0, nextColor: 0 };
 }
 
 function attachment(ws) {

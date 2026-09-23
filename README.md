@@ -87,11 +87,24 @@ what the board list shows. Everything else about a board (owner, members,
 link sharing) lives in the database; the shapes never leave the object.
 
 **Whose plan counts.** A service only ever sees the visitor's `X-Yard-Tier`,
-so a board cannot ask the edge about its owner. `GET api/me` snapshots the
-visitor's plan into `users.plan` on every visit, and the handler reads the
-owner's snapshot when someone connects. Board limits (boards owned, people
-at once, shapes) follow the owner; export follows the person exporting.
-`owner` and `trial` entitlements count as Pro.
+so a board cannot ask the edge about its owner. Every `api/` request
+snapshots the caller's plan into `users.plan`, and the handler reads the
+owner's snapshot when someone else connects (the owner's own connection uses
+their live headers). Board limits (boards owned, people at once, shapes)
+follow the owner; export follows the person exporting. Pro is the project
+owner (`X-Yard-Entitlement: owner`), or an `active` or `trial` entitlement
+whose `X-Yard-Tier` is `Pro`; everything else is Free. The tier name is the
+`PRO_TIER` constant in `_service.js`, so renaming the tier in
+`settings.json` means renaming it there too. The limits themselves are the
+`LIMITS` table in the same file; the app reads them from `api/me`.
+
+**The server is the paywall.** Every limit is enforced in `_service.js` or
+the `Board` object; the app's upgrade dialogs only explain a refusal.
+
+**Sharing is revocable.** Joining through the link records a membership,
+but it only counts while the owner keeps link sharing on. Turning sharing
+off hides the board from members' lists, refuses their requests, and closes
+their open sockets with code 4003; turning it back on lets them back in.
 
 **Sign in first, then connect.** The service is `authenticated`, so Yard Auth
 signs visitors in (a consent screen the first time, silent after that), and
@@ -159,10 +172,10 @@ Every line starts with `[chalk]` and is a single event, so it greps cleanly:
     [chalk] flush board=5b1c37d7 shapes=14 ms=3
     [chalk] request method=POST path=/api/boards/5b1c37d7/join status=200 user=05c444a7 ms=4
 
-Handler events: `request`, `auth.rejected`, `me.update`, `me.rename`,
+Handler events: `request`, `auth.rejected`, `me.rename`,
 `board.seed|create|join|rename|share|delete|leave`, `board.join.rejected`,
 `boards.limit`, `export`, `export.denied`, `ws.forward`, `ws.rejected`.
-Object events: `board.wake`, `peer.join|leave|error|rename`, `board.full`,
+Object events: `board.wake`, `peer.join|leave|error|rename`, `board.full`, `board.unshared`,
 `shape.put|del|rejected`, `flush`, `board.deleted`. Failures go to
 `console.error` as `request.failed` and `internal.failed`.
 

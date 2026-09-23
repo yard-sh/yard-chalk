@@ -328,7 +328,7 @@ function setStatus(status) {
 
 function onStop(reason) {
   if (reason === "full") {
-    showPlan("full", state.limits ? state.limits.live : 5);
+    showPlan("full");
     return;
   }
   toast(reason === "deleted" ? "This board was deleted" : "You no longer have access to this board");
@@ -464,25 +464,30 @@ $("export-button").addEventListener("click", () => {
 /* ------------------------------------------------------------------- plan */
 //
 // Board limits follow the owner's plan; export follows yours. The copy says
-// which, and the upgrade buttons only appear when upgrading would help.
+// which, and the upgrade buttons only appear when upgrading would help. The
+// numbers come from api/me, so the server's LIMITS are the only copy of them.
+// The server enforces every limit; these dialogs only explain a refusal.
+
+const count = (n) => n.toLocaleString("en-US");
 
 const PLAN_COPY = {
-  boards_limit: (limit) => [
+  boards_limit: (limit, { free }) => [
     "That is every board on Free",
-    "Free plans hold " + limit + " boards. Pro holds as many as you like.",
+    "Free plans hold " + count(limit ?? free.boards) + " boards. Pro holds as many as you like.",
     true,
   ],
-  full: (limit) => [
+  full: (limit, { free, pro }) => [
     "This board is full",
-    limit +
-      " people are on it already. Free boards hold 5 people at once and Pro boards hold 50. The board's owner sets its plan.",
+    count(limit ?? state.limits?.live ?? free.live) +
+      " people are on it already. Free boards hold " + count(free.live) +
+      " people at once and Pro boards hold " + count(pro.live) + ". The board's owner sets its plan.",
     false,
   ],
-  shapes_limit: (limit) => [
+  shapes_limit: (limit, { free, pro }) => [
     "This board is full of shapes",
-    "It holds " +
-      limit +
-      " shapes. Free boards hold 500 and Pro boards hold 5,000. The board's owner sets its plan.",
+    "It holds " + count(limit ?? state.limits?.shapes ?? free.shapes) +
+      " shapes. Free boards hold " + count(free.shapes) +
+      " and Pro boards hold " + count(pro.shapes) + ". The board's owner sets its plan.",
     false,
   ],
   pro_required: () => [
@@ -493,11 +498,8 @@ const PLAN_COPY = {
 };
 
 function showPlan(code, limit) {
-  if (limit === undefined || limit === null) {
-    const l = state.limits || { live: 5, shapes: 500 };
-    limit = code === "full" ? l.live : code === "shapes_limit" ? l.shapes : 3;
-  }
-  const [title, body, yours] = PLAN_COPY[code](limit);
+  if (!state.me) return;
+  const [title, body, yours] = PLAN_COPY[code](limit, state.me.limits);
   $("plan-title").textContent = title;
   $("plan-copy").textContent = body;
   const free = state.me && state.me.plan !== "pro";
