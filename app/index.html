@@ -56,7 +56,9 @@
             </div>
             <div class="menu__rule"></div>
             <a class="menu__item" id="account-upgrade" href="../">Upgrade to Pro</a>
-            <a class="menu__item" href="__yard/auth/logout">Sign out</a>
+            <!-- Signs out at the project root and lands on the landing page;
+                 back at the app, the Yard session would sign them straight in. -->
+            <a class="menu__item" href="../__yard/auth/logout?return=/">Sign out</a>
           </div>
         </div>
       </div>
