@@ -3,9 +3,9 @@
 -- the file unrecorded in _yard_migrations, which re-runs it from the top on
 -- the next deploy. IF NOT EXISTS makes that re-run harmless.
 --
--- Shapes are not here. Each board's drawing lives inside its object, which
+-- Shapes are not here. Each board's drawing lives inside its room, which
 -- holds the live connections; the database only knows who owns which board,
--- who has joined it, and a summary the object writes back now and then.
+-- who has joined it, and a summary the room writes back now and then.
 
 -- One row per person who has opened the app. plan is a snapshot of the tier
 -- the edge reported on their last visit, which is how a board can enforce its

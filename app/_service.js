@@ -9,8 +9,8 @@
 //
 // Two things live in this file. The default export is the fetch handler: the
 // board list, membership, sharing, export, and the one route that hands a
-// WebSocket to a board. The Board class is an object: one instance per board,
-// declared under "objects" in .yard/settings.json and reached through
+// WebSocket to a board. The Board class is a room class: one room per board,
+// declared under "rooms" in .yard/settings.json and reached through
 // env.BOARDS. It holds every open connection to that board and the board's
 // shapes, so it is the single place where edits are ordered.
 
@@ -211,7 +211,7 @@ async function allBoards(env, user) {
 }
 
 // First visit: a board with two notes, so nobody lands on an empty canvas.
-// The row goes to the database; the notes go to the board's object.
+// The row goes to the database; the notes go to the board's room.
 async function seedBoard(env, user) {
   const id = crypto.randomUUID();
   await env.DB.prepare("INSERT INTO boards (id, owner_id, name) VALUES (?1, ?2, ?3)")
@@ -306,7 +306,7 @@ async function updateBoard(request, env, access) {
   await env.DB.prepare("UPDATE boards SET name = ?1, link_access = ?2 WHERE id = ?3")
     .bind(name, link ? 1 : 0, board.id)
     .run();
-  // Whoever is on the board right now hears about it through the object,
+  // Whoever is on the board right now hears about it through the room,
   // which also closes every editor's socket when sharing goes off.
   await internal(env, board.id, "POST", "/__board", { name, link_access: link });
 
@@ -322,10 +322,10 @@ async function deleteBoard(env, access) {
     env.DB.prepare("DELETE FROM board_members WHERE board_id = ?1").bind(board.id),
     env.DB.prepare("DELETE FROM boards WHERE id = ?1").bind(board.id),
   ]);
-  // The object closes every connection and drops its storage. If this call
+  // The room closes every connection and drops its storage. If this call
   // fails the row is already gone, so the orphaned shapes are unreachable.
   const res = await internal(env, board.id, "POST", "/__delete");
-  log("board.delete", { board: shortId(board.id), membersRemoved: changed(results[0]), objectCleared: res.ok });
+  log("board.delete", { board: shortId(board.id), membersRemoved: changed(results[0]), roomCleared: res.ok });
   return json({ ok: true });
 }
 
@@ -363,8 +363,8 @@ async function exportBoard(env, me, access) {
 
 // The realtime route. The handler's whole job is to decide whether this
 // person may enter, look up what the board needs to know, and forward the
-// upgrade to the board's object. The X-Chalk-* headers are set here, after
-// stripping anything a client sent, so the object can trust them the way it
+// upgrade to the board's room. The X-Chalk-* headers are set here, after
+// stripping anything a client sent, so the room can trust them the way it
 // trusts X-Yard-*.
 async function connectBoard(request, env, me, access) {
   const { board, role } = access;
@@ -397,18 +397,18 @@ async function connectBoard(request, env, me, access) {
   headers.set("X-Chalk-Role", role);
 
   log("ws.forward", { user: shortId(user), board: shortId(board.id), role, ownerPlan });
-  return objectFor(env, board.id).fetch(new Request(request, { headers }));
+  return roomFor(env, board.id).fetch(new Request(request, { headers }));
 }
 
-function objectFor(env, boardId) {
+function roomFor(env, boardId) {
   return env.BOARDS.get(env.BOARDS.idFromName(boardId));
 }
 
-// Handler-to-object calls that are not upgrades. Clients cannot reach the
-// object directly, so paths under /__ are private by construction.
+// Handler-to-room calls that are not upgrades. Clients cannot reach the
+// room directly, so paths under /__ are private by construction.
 async function internal(env, boardId, method, path, body) {
   try {
-    return await objectFor(env, boardId).fetch("https://chalk.internal" + path, {
+    return await roomFor(env, boardId).fetch("https://chalk.internal" + path, {
       method,
       headers: body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -645,7 +645,7 @@ export class Board {
       JSON.stringify(shape.props), me.user_id, seq,
     );
     await this.touched();
-    // Echoed to everyone, the sender included: the object's order is the
+    // Echoed to everyone, the sender included: the room's order is the
     // board's order, and each client applies it the same way.
     this.broadcast({ t: "put", shape, by: me.cid, seq });
     if (!exists) log("shape.put", { board: shortId(this.meta.board), cid: me.cid, kind: shape.kind, shapes: this.count() });

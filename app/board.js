@@ -1,6 +1,6 @@
 // Chalk canvas engine.
 //
-// One SVG, one world group, shapes keyed by id. The board's object is the
+// One SVG, one world group, shapes keyed by id. The board's room is the
 // only source of order: this module applies its own edits at once and then
 // applies every echo it receives, skipping only the shapes under the pointer
 // while a drag is in progress. Nothing here touches the network; app.js

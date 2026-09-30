@@ -1,6 +1,6 @@
 // Chalk socket client.
 //
-// One connection per open board. The board's object echoes every stored edit
+// One connection per open board. The board's room echoes every stored edit
 // back to everyone in order, so this module only moves messages; ordering and
 // state live in board.js. Reconnecting is routine, not an error: Yard closes
 // every session after 24 hours with code 1000 and "Session limit reached",
