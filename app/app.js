@@ -782,12 +782,9 @@ function initials(name) {
   return (first + second).toUpperCase();
 }
 
-function ago(stamp) {
-  if (!stamp) return "";
-  const iso = /[TZ]/.test(stamp) ? stamp : stamp.replace(" ", "T") + "Z";
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return "";
-  const mins = Math.round((Date.now() - then) / 60000);
+function ago(ms) {
+  if (!ms) return "";
+  const mins = Math.round((Date.now() - ms) / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return mins + "m ago";
   const hours = Math.round(mins / 60);

@@ -6,6 +6,8 @@
 -- Shapes are not here. Each board's drawing lives inside its room, which
 -- holds the live connections; the database only knows who owns which board,
 -- who has joined it, and a summary the room writes back now and then.
+--
+-- Times are milliseconds since the epoch, written by the service.
 
 -- One row per person who has opened the app. plan is a snapshot of the tier
 -- the edge reported on their last visit, which is how a board can enforce its
@@ -15,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   name    TEXT NOT NULL,
   email   TEXT NOT NULL DEFAULT '',
   plan    TEXT NOT NULL DEFAULT 'free',
-  seen_at TEXT NOT NULL DEFAULT (datetime('now'))
+  seen_at INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS boards (
@@ -24,8 +26,8 @@ CREATE TABLE IF NOT EXISTS boards (
   name        TEXT NOT NULL,
   link_access INTEGER NOT NULL DEFAULT 0,
   shape_count INTEGER NOT NULL DEFAULT 0,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_boards_owner ON boards (owner_id, updated_at);
@@ -35,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_boards_owner ON boards (owner_id, updated_at);
 CREATE TABLE IF NOT EXISTS board_members (
   board_id  TEXT NOT NULL,
   user_id   TEXT NOT NULL,
-  joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+  joined_at INTEGER NOT NULL,
   PRIMARY KEY (board_id, user_id)
 );
 

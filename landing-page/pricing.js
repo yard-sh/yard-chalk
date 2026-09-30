@@ -98,9 +98,9 @@
 
     // Trials are per tier: the button only appears when this tier has one,
     // and it points at this tier so the redirect starts the right trial.
-    if (tier.free_trial_enabled && tier.free_trial_days > 0) {
+    if (tier.free_trial && tier.free_trial.enabled) {
       trial.dataset.tierId = tier.id;
-      trial.textContent = "Start a " + tier.free_trial_days + "-day trial";
+      trial.textContent = "Start a " + tier.free_trial.days + "-day trial";
       trial.hidden = false;
     }
 

@@ -150,11 +150,11 @@ async function ensureUser(env, headers, user) {
   const entitlement = headers.get("X-Yard-Entitlement") || "none";
   const plan = planOf(headers);
   const row = await env.DB.prepare(
-    "INSERT INTO users (id, name, email, plan, seen_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))" +
+    "INSERT INTO users (id, name, email, plan, seen_at) VALUES (?1, ?2, ?3, ?4, ?5)" +
       " ON CONFLICT(id) DO UPDATE SET email = excluded.email, plan = excluded.plan, seen_at = excluded.seen_at" +
       " RETURNING name",
   )
-    .bind(user, defaultName(user, email), email, plan)
+    .bind(user, defaultName(user, email), email, plan, Date.now())
     .first();
   return {
     user_id: user,
@@ -214,8 +214,8 @@ async function allBoards(env, user) {
 // The row goes to the database; the notes go to the board's room.
 async function seedBoard(env, user) {
   const id = crypto.randomUUID();
-  await env.DB.prepare("INSERT INTO boards (id, owner_id, name) VALUES (?1, ?2, ?3)")
-    .bind(id, user, "My first board")
+  await env.DB.prepare("INSERT INTO boards (id, owner_id, name, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?4)")
+    .bind(id, user, "My first board", Date.now())
     .run();
   const shapes = [
     note("seed-welcome", 120, 120, "yellow", "Welcome to your first board. Drag this note around: everyone here sees it move."),
@@ -249,8 +249,8 @@ async function createBoard(request, env, me) {
   }
 
   const id = crypto.randomUUID();
-  await env.DB.prepare("INSERT INTO boards (id, owner_id, name) VALUES (?1, ?2, ?3)")
-    .bind(id, user, clean)
+  await env.DB.prepare("INSERT INTO boards (id, owner_id, name, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?4)")
+    .bind(id, user, clean, Date.now())
     .run();
   log("board.create", { user: shortId(user), board: shortId(id), plan, nameLen: clean.length, boardsNow: owned.n + 1 });
   const row = await env.DB.prepare(`SELECT ${BOARD_COLUMNS} FROM boards b WHERE b.id = ?1`).bind(id).first();
@@ -282,8 +282,8 @@ async function joinBoard(env, user, access) {
       log("board.join.rejected", { user: shortId(user), board: shortId(board.id), reason: "not-shared" });
       return json({ error: "this board is not shared", code: "not_shared" }, 403);
     }
-    await env.DB.prepare("INSERT OR IGNORE INTO board_members (board_id, user_id) VALUES (?1, ?2)")
-      .bind(board.id, user)
+    await env.DB.prepare("INSERT OR IGNORE INTO board_members (board_id, user_id, joined_at) VALUES (?1, ?2, ?3)")
+      .bind(board.id, user, Date.now())
       .run();
     role = "editor";
     log("board.join", { user: shortId(user), board: shortId(board.id) });
@@ -691,9 +691,9 @@ export class Board {
     const shapes = this.count();
     if (this.meta.board && this.env.DB) {
       await this.env.DB.prepare(
-        "UPDATE boards SET shape_count = ?1, updated_at = datetime('now') WHERE id = ?2",
+        "UPDATE boards SET shape_count = ?1, updated_at = ?2 WHERE id = ?3",
       )
-        .bind(shapes, this.meta.board)
+        .bind(shapes, Date.now(), this.meta.board)
         .run();
     }
     log("flush", { board: shortId(this.meta.board), shapes, ms: Date.now() - started });
