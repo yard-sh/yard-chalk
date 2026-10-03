@@ -14,9 +14,9 @@ subscription.
 - App: https://tatelax.yard.sh/chalk/app/
 
 Use the link above, or paste this repository's URL into the Create from GitHub
-URL field of the Yard dashboard's Create Project dialog. Chalk declares
-rooms (realtime state inside a service), which are part of Yard Pro, so
-creating it needs a Pro plan.
+URL field of the Yard dashboard's Create Project dialog. Chalk declares rooms
+(realtime state inside a service), which are part of Yard Basic and Pro, so
+creating it needs one of those plans.
 
 ## Layout
 
@@ -188,13 +188,13 @@ advances the clock at I/O boundaries.
 
 ## Usage and cost
 
-Rooms are metered: requests, compute time while a message is being
-handled, and stored bytes, with a monthly allowance on Pro and overage past
+Rooms are metered: requests, compute time while a message is being handled,
+and stored bytes, with a monthly allowance on Basic and Pro and overage past
 it. An inbound socket message counts as one twentieth of a request, and a
 board that is holding sockets but doing nothing costs no compute. Two habits
 in the client follow from that: cursor positions are sent at most once every
-50 ms, and pen strokes go out in batches while drawing and as one stored
-shape at pen-up. The Usage page in the dashboard shows the month so far.
+50 ms, and pen strokes go out in batches while drawing and as one stored shape
+at pen-up. The Usage page in the dashboard shows the month so far.
 
 ## Shipping
 
