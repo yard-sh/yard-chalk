@@ -109,7 +109,7 @@
     // signed-out case on their own.
     if (window.yard.ownership) {
       window.yard.ownership().then(function (state) {
-        if (!state || !state.owned || state.tier_id !== tier.id) return;
+        if (!state || !state.owned || state.tier_key !== tier.key) return;
         var current = card.querySelector("[data-current]");
         if (current) current.hidden = false;
       }).catch(function () {});

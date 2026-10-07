@@ -86,17 +86,18 @@ the alarm writes `shape_count` and `updated_at` to the `boards` row, which is
 what the board list shows. Everything else about a board (owner, members,
 link sharing) lives in the database; the shapes never leave the room.
 
-**Whose plan counts.** A service only ever sees the visitor's `X-Yard-Tier`,
-so a board cannot ask the edge about its owner. Every `api/` request
-snapshots the caller's plan into `users.plan`, and the handler reads the
-owner's snapshot when someone else connects (the owner's own connection uses
-their live headers). Board limits (boards owned, people at once, shapes)
-follow the owner; export follows the person exporting. Pro is the project
-owner (`X-Yard-Entitlement: owner`), or an `active` or `trial` entitlement
-whose `X-Yard-Tier` is `Pro`; everything else is Free. The tier name is the
-`PRO_TIER` constant in `_service.js`, so renaming the tier in
-`settings.json` means renaming it there too. The limits themselves are the
-`LIMITS` table in the same file; the app reads them from `api/me`.
+**Whose plan counts.** A service only ever sees the visitor's own tier
+(`X-Yard-Tier-Key`), so a board cannot ask the edge about its owner. Every
+`api/` request snapshots the caller's plan into `users.plan`, and the
+handler reads the owner's snapshot when someone else connects (the owner's
+own connection uses their live headers). Board limits (boards owned, people
+at once, shapes) follow the owner; export follows the person exporting. Pro
+is the project owner (`X-Yard-Entitlement: owner`), or an `active` or
+`trial` entitlement whose `X-Yard-Tier-Key` is `pro`; everything else is
+Free. The tier's key is the `PRO_TIER` constant in `_service.js`. Renaming
+the tier in `settings.json` changes nothing, but changing its `key` means
+changing `PRO_TIER` too. The limits themselves are the `LIMITS` table in the
+same file; the app reads them from `api/me`.
 
 **The server is the paywall.** Every limit is enforced in `_service.js` or
 the `Board` class; the app's upgrade dialogs only explain a refusal.

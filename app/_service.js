@@ -3,7 +3,8 @@
 // No ports, no listen(): Yard runs this as a fetch handler. Requests arrive
 // with the app path rooted at "/" and, for signed-in visitors, trusted
 // identity headers the edge verified:
-//   X-Yard-User-Id, X-Yard-Email, X-Yard-Entitlement, X-Yard-Tier, X-Yard-Sandbox
+//   X-Yard-User-Id, X-Yard-Email, X-Yard-Entitlement, X-Yard-Tier,
+//   X-Yard-Tier-Key, X-Yard-Sandbox
 // Clients can never spoof these: the edge strips inbound X-Yard-* first, and
 // `yard dev` stamps the same headers locally from the persona you pick.
 //
@@ -14,7 +15,7 @@
 // env.BOARDS. It holds every open connection to that board and the board's
 // shapes, so it is the single place where edits are ordered.
 
-const PRO_TIER = "Pro";
+const PRO_TIER = "pro";
 
 // Board limits follow the board owner's plan. Export follows the exporter's.
 // The client reads these from api/me (Infinity serializes as null, which it
@@ -130,15 +131,16 @@ async function handleAPI(request, env, url) {
 /* -------------------------------------------------------------- identity */
 
 // Pro is the project owner, or a live purchase, subscription or trial of the
-// tier named PRO_TIER. The tier is checked for trials too, so a trial added
-// to some other tier later never unlocks Pro. Anything else, including a
-// signed-in visitor with no purchase at all, is Free. Renaming the Pro tier
-// in .yard/settings.json means renaming PRO_TIER with it.
+// tier whose key is PRO_TIER. The tier is checked for trials too, so a trial
+// added to some other tier later never unlocks Pro. Anything else, including
+// a signed-in visitor with no purchase at all, is Free. The key survives
+// renaming the tier in .yard/settings.json; changing the key there means
+// changing PRO_TIER with it.
 function planOf(headers) {
   const entitlement = headers.get("X-Yard-Entitlement") || "none";
   if (entitlement === "owner") return "pro";
   if (entitlement !== "active" && entitlement !== "trial") return "free";
-  return headers.get("X-Yard-Tier") === PRO_TIER ? "pro" : "free";
+  return headers.get("X-Yard-Tier-Key") === PRO_TIER ? "pro" : "free";
 }
 
 // There is no display-name header, so the first visit derives one from the
@@ -163,6 +165,7 @@ async function ensureUser(env, headers, user) {
     plan,
     entitlement,
     tier: headers.get("X-Yard-Tier") || "",
+    tier_key: headers.get("X-Yard-Tier-Key") || "",
     limits: LIMITS,
   };
 }
