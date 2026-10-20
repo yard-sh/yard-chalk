@@ -17,6 +17,7 @@ const MAX_TEXT = 2000;
 const MAX_POINTS = 2000;
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 8;
+const GRID = 24; // dot grid spacing at scale 1, as in .canvas in styles.css
 const NOTE_FONT = 16;
 const NOTE_PAD = 14;
 const LINE_HEIGHT = 1.3;
@@ -86,6 +87,12 @@ export function createBoard(svg, editor, options) {
       "transform",
       "translate(" + view.x + " " + view.y + ") scale(" + view.scale + ")",
     );
+    // The dot grid is the canvas background: it follows the pan, and its
+    // spacing follows the zoom, doubling when the dots would crowd together.
+    let step = GRID * view.scale;
+    while (step < GRID / 2) step *= 2;
+    svg.style.backgroundSize = step + "px " + step + "px";
+    svg.style.backgroundPosition = view.x + "px " + view.y + "px";
     for (const entry of peers.values()) placeCursor(entry);
     renderSelection();
     if (options.onView) options.onView(view.scale);
