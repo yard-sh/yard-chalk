@@ -967,6 +967,15 @@ body[data-view="list"] .onboard {
   cursor: text;
 }
 
+.canvas[data-tool="eraser"] {
+  cursor: cell;
+}
+
+/* Under the eraser, before the pointer lifts and the shape is deleted. */
+.shape.is-erasing {
+  opacity: 0.25;
+}
+
 .canvas[data-tool="select"] .shape {
   cursor: move;
 }

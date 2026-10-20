@@ -8,7 +8,7 @@
 
 const SVG = "http://www.w3.org/2000/svg";
 
-export const TOOLS = ["select", "hand", "note", "rect", "ellipse", "line", "pen", "text"];
+export const TOOLS = ["select", "hand", "note", "rect", "ellipse", "line", "pen", "text", "eraser"];
 export const COLORS = ["yellow", "pink", "blue", "green", "orange", "purple", "grey", "ink"];
 
 const DEFAULT_SIZE = { note: [180, 180], rect: [160, 100], ellipse: [160, 100] };
@@ -624,6 +624,33 @@ export function createBoard(svg, editor, options) {
       // Created on pointer up: focusing the editor during pointer down would
       // lose to the browser moving focus to the canvas a moment later.
       drag = { type: "text", start: p };
+    } else if (tool === "eraser") {
+      drag = { type: "erase", ids: new Set(), last: { x: event.clientX, y: event.clientY } };
+      eraseAt(drag, event.clientX, event.clientY);
+    }
+  }
+
+  // Marks every shape the eraser passes over. A fast drag jumps several
+  // pixels between moves, so the gap is sampled every few pixels; the marked
+  // shapes are deleted together on release, as one undo step.
+  function eraseAt(d, clientX, clientY) {
+    const steps = Math.max(1, Math.ceil(Math.hypot(clientX - d.last.x, clientY - d.last.y) / 4));
+    for (let i = 1; i <= steps; i++) {
+      const x = d.last.x + ((clientX - d.last.x) * i) / steps;
+      const y = d.last.y + ((clientY - d.last.y) * i) / steps;
+      const hit = document.elementFromPoint(x, y);
+      const node = hit && hit.closest(".shape");
+      if (!node || !svg.contains(node) || d.ids.has(node.dataset.id)) continue;
+      d.ids.add(node.dataset.id);
+      node.classList.add("is-erasing");
+    }
+    d.last = { x: clientX, y: clientY };
+  }
+
+  function unmarkErased(d) {
+    for (const id of d.ids) {
+      const node = nodes.get(id);
+      if (node) node.classList.remove("is-erasing");
     }
   }
 
@@ -691,6 +718,9 @@ export function createBoard(svg, editor, options) {
         if (options.onInk) options.onInk(drag.id, p, color, PEN_WIDTH);
         break;
       }
+      case "erase":
+        eraseAt(drag, event.clientX, event.clientY);
+        break;
     }
   }
 
@@ -807,6 +837,10 @@ export function createBoard(svg, editor, options) {
         emitPut(s, null);
         break;
       }
+      case "erase":
+        unmarkErased(d);
+        deleteShapes([...d.ids]);
+        break;
     }
   }
 
@@ -829,6 +863,8 @@ export function createBoard(svg, editor, options) {
     } else if (d.type === "pen") {
       clearInk(d.id);
       if (options.onInk) options.onInk(d.id, "end", color, PEN_WIDTH);
+    } else if (d.type === "erase") {
+      unmarkErased(d);
     }
   }
 
@@ -1069,7 +1105,7 @@ export function createBoard(svg, editor, options) {
 
   /* ----------------------------------------------------------- keyboard */
 
-  const TOOL_KEYS = { v: "select", h: "hand", n: "note", r: "rect", o: "ellipse", l: "line", p: "pen", t: "text" };
+  const TOOL_KEYS = { v: "select", h: "hand", n: "note", r: "rect", o: "ellipse", l: "line", p: "pen", t: "text", e: "eraser" };
 
   function handleKey(event) {
     if (editing) return false;
