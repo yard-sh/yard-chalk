@@ -25,7 +25,7 @@ creating it needs one of those plans.
       migrations/         applied in filename order at deploy, and by yard dev
       dev/                local state written by yard dev; ignored by git
     app/                  the deployable bundle (the services[] entry with dir: app)
-      _service.js         the entire backend: the fetch handler and the Board room class
+      _service.js         the entire backend: the fetch handler and the Board room type
       index.html          app shell
       app.js              boot, board list, sharing, account, undo, plan cards
       live.js             the socket client: reconnect, queue, cursor throttle
@@ -34,12 +34,12 @@ creating it needs one of those plans.
     landing-page/         the marketing page, with a live demo and pricing built from the tiers
 
 The service entry declares its mount path, access mode, database access, and
-the room class it exports:
+its room type:
 
     "services": [
       { "dir": "app", "name": "app", "url": "/app",
         "access": "authenticated", "database_access": true,
-        "rooms": [{ "class": "Board", "binding": "BOARDS" }] }
+        "rooms": [{ "type": "Board", "binding": "BOARDS" }] }
     ]
 
 `yard push` sends that file along with the bundles, so changing how the
@@ -119,7 +119,7 @@ Two details worth knowing before editing:
   `fetch("api/boards")`, never `/api/boards`, and the socket URL is built
   from `location.href`. Board selection lives in `location.hash` for the same
   reason. `yard service check` lints fetches and links, not socket URLs.
-- **The class name is the identity.** Renaming `Board` in `settings.json`
+- **The type name is the identity.** Renaming `Board` in `settings.json`
   deletes every board and its shapes on the next deploy; `yard push` warns
   before it does. Change the `binding` if only the name in `env` should
   change.
@@ -228,7 +228,7 @@ own database and its own boards.
 ## Data lifecycle
 
 - Deleting a board removes its rows and tells the room to drop its storage.
-- Removing the `Board` class from `settings.json` deletes every board's
+- Removing the `Board` room type from `settings.json` deletes every board's
   shapes at the next deploy. `yard push` prints a warning first.
 - Removing the whole service keeps the boards for 30 days, in case the
   service comes back under the same name.

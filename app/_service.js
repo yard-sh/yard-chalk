@@ -10,10 +10,10 @@
 //
 // Two things live in this file. The default export is the fetch handler: the
 // board list, membership, sharing, export, and the one route that hands a
-// WebSocket to a board. The Board class is a room class: one room per board,
-// declared under "rooms" in .yard/settings.json and reached through
-// env.BOARDS. It holds every open connection to that board and the board's
-// shapes, so it is the single place where edits are ordered.
+// WebSocket to a board. The Board class implements the Board room type: one
+// room per board, declared under "rooms" in .yard/settings.json and reached
+// through env.BOARDS. It holds every open connection to that board and the
+// board's shapes, so it is the single place where edits are ordered.
 
 const PRO_TIER = "pro";
 

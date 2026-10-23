@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "project_slug": "chalk",
   "ignore_files": [],
   "services": [
@@ -11,7 +11,7 @@
       "database_access": true,
       "rooms": [
         {
-          "class": "Board",
+          "type": "Board",
           "binding": "BOARDS"
         }
       ]
