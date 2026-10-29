@@ -2,8 +2,10 @@
 //
 // Zero dependencies, three modules. Every URL is RELATIVE ("api/boards", not
 // "/api/boards"): the app is mounted at /<slug>/app/, so a root-absolute URL
-// would resolve against the domain root. The open board lives in the hash
-// for the same reason. board.js draws, live.js talks; this file decides.
+// would resolve against the domain root. The open board is a query parameter
+// (?board=<id>) for the same reason, and because a sign-in round trip keeps
+// the path and query, so a shared link survives it. board.js draws, live.js
+// talks; this file decides.
 
 import { connect } from "./live.js";
 import { createBoard } from "./board.js";
@@ -30,6 +32,9 @@ const toastEl = $("toast");
 const zoomEl = $("zoom");
 
 const HISTORY_MAX = 100;
+
+// The app's own directory, whatever the current query.
+const BASE = new URL("./", location.href);
 
 const state = {
   me: null,
@@ -82,6 +87,7 @@ async function guard(fn) {
   try {
     await fn();
   } catch (err) {
+    // The browser lost its guest id or its session; booting again gets one.
     if (err.status === 401) {
       location.reload();
       return;
@@ -220,9 +226,12 @@ function openBoard(id) {
       if (err.code === "not_shared") toast("This board is not shared");
       else if (err.status === 404) toast("That board is gone");
       else throw err;
-      location.hash = "";
+      navigate("./", true);
       return;
     }
+    // The route may have moved on, or opened this board already, while the
+    // join was in flight.
+    if (routedBoard() !== id || state.boardId === id) return;
     state.boardId = id;
     state.meta = meta;
     state.viewRestored = restoreView(id);
@@ -332,7 +341,7 @@ function onStop(reason) {
     return;
   }
   toast(reason === "deleted" ? "This board was deleted" : "You no longer have access to this board");
-  location.hash = "";
+  navigate("./", true);
 }
 
 /* ------------------------------------------------------------------- head */
@@ -400,13 +409,11 @@ function renderShare() {
   const owner = state.meta.role === "owner";
   shareToggle.checked = Boolean(state.meta.link_access);
   shareToggle.disabled = !owner;
-  shareLink.value = location.href;
-  shareNote.textContent = owner
-    ? state.meta.link_access
-      ? "Anyone signed in to Yard with this link can edit."
-      : "Only you can open this board."
-    : state.meta.link_access
-      ? "Anyone signed in to Yard with this link can edit."
+  shareLink.value = new URL("?board=" + state.boardId, BASE).href;
+  shareNote.textContent = state.meta.link_access
+    ? "Anyone with this link can edit."
+    : owner
+      ? "Only you can open this board."
       : "The owner turned link sharing off.";
   $("share-copy").disabled = !state.meta.link_access && !owner;
 }
@@ -510,6 +517,12 @@ function showPlan(code, limit) {
 
 /* ---------------------------------------------------------------- account */
 
+// Sign-in comes back to this page, the open board included. `return` is a
+// path under the service, which is where this page lives.
+function signInHref() {
+  return "__yard/auth/login?return=" + encodeURIComponent("/" + location.search);
+}
+
 function renderAccount() {
   const me = state.me;
   if (!me) return;
@@ -520,8 +533,32 @@ function renderAccount() {
   nameInput.value = me.name;
   planBadge.textContent = me.plan === "pro" ? "Pro" : "Free";
   planBadge.dataset.plan = me.plan;
-  $("account-email").textContent = me.email || "";
+  $("account-email").textContent = me.signed_in ? me.email || "" : "Guest";
   $("account-upgrade").hidden = me.plan === "pro";
+  $("account-guest").hidden = me.signed_in;
+  $("guest-hint").hidden = me.signed_in;
+  $("guest-signin").href = signInHref();
+  // Signing out happens at the project root and lands on the landing page.
+  const auth = $("account-auth");
+  auth.textContent = me.signed_in ? "Sign out" : "Sign in";
+  auth.href = me.signed_in ? "../__yard/auth/logout?return=/" : signInHref();
+}
+
+// A signed-out visitor is a guest: the edge issues the browser a guest id and
+// sends it with every request from then on, sockets included. Once a guest
+// signs in, the first api/me moves their boards to the account and says the
+// guest id can go.
+async function loadMe() {
+  let me;
+  try {
+    me = await api("api/me");
+  } catch (err) {
+    if (err.status !== 401) throw err;
+    await api("__yard/auth/guest", { method: "POST" });
+    me = await api("api/me");
+  }
+  if (me.forget_guest) fetch("__yard/auth/guest", { method: "DELETE" }).catch(() => {});
+  return me;
 }
 
 accountButton.addEventListener("click", (event) => {
@@ -574,7 +611,7 @@ async function refreshMe() {
   state.meCheckedAt = Date.now();
   const before = state.me ? state.me.plan : null;
   try {
-    state.me = await api("api/me");
+    state.me = await loadMe();
   } catch {
     return;
   }
@@ -608,7 +645,8 @@ function renderList() {
     card.dataset.tint = String(i % 6);
     const open = document.createElement("a");
     open.className = "bcard__open";
-    open.href = "#" + b.id;
+    open.href = "?board=" + b.id;
+    open.dataset.route = "";
     open.append(el("span", "bcard__name", b.name));
     const shapes = b.shape_count === 1 ? "1 shape" : b.shape_count + " shapes";
     open.append(el("span", "bcard__meta small", b.role + " · " + shapes + " · " + ago(b.updated_at)));
@@ -639,7 +677,7 @@ $("new-board").addEventListener("click", () => {
       method: "POST",
       body: JSON.stringify({ name: name.trim().slice(0, 80) }),
     });
-    location.hash = created.id;
+    navigate("?board=" + created.id);
   });
 });
 
@@ -794,24 +832,44 @@ function ago(ms) {
 
 /* ------------------------------------------------------------------- route */
 
-function route() {
-  const id = location.hash.replace(/^#/, "");
-  if (id) openBoard(id);
-  else guard(showList);
+function routedBoard() {
+  return new URLSearchParams(location.search).get("board");
 }
 
-window.addEventListener("hashchange", route);
+function route() {
+  // Links from before the board moved to the query used #<id>.
+  const legacy = location.hash.match(/^#([A-Za-z0-9_-]+)$/);
+  if (legacy) history.replaceState(null, "", new URL("?board=" + legacy[1], BASE));
+  const id = routedBoard();
+  if (id) openBoard(id);
+  else guard(showList);
+  renderAccount();
+}
+
+function navigate(url, replace) {
+  const next = new URL(url, BASE);
+  if (replace) history.replaceState(null, "", next);
+  else history.pushState(null, "", next);
+  route();
+}
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest("a[data-route]");
+  if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  navigate(link.getAttribute("href"));
+});
+
+window.addEventListener("popstate", route);
 window.addEventListener("pagehide", saveView);
 
 async function main() {
   try {
-    state.me = await api("api/me");
-  } catch (err) {
+    state.me = await loadMe();
+  } catch {
     boardsEl.hidden = false;
     boardListEl.textContent = "";
-    boardListEl.append(
-      el("p", "boards__empty", err.status === 401 ? "Sign in to use Chalk" : "Could not load your account"),
-    );
+    boardListEl.append(el("p", "boards__empty", "Could not load your account"));
     return;
   }
   state.meCheckedAt = Date.now();

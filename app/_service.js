@@ -1,12 +1,17 @@
 // Chalk backend.
 //
 // No ports, no listen(): Yard runs this as a fetch handler. Requests arrive
-// with the app path rooted at "/" and, for signed-in visitors, trusted
-// identity headers the edge verified:
+// with the app path rooted at "/" and trusted identity headers the edge
+// verified. Signed-in visitors carry
 //   X-Yard-User-Id, X-Yard-Email, X-Yard-Entitlement, X-Yard-Tier,
 //   X-Yard-Tier-Key, X-Yard-Sandbox
-// Clients can never spoof these: the edge strips inbound X-Yard-* first, and
-// `yard dev` stamps the same headers locally from the persona you pick.
+// and a browser that asked for a guest id (POST __yard/auth/guest) carries
+// X-Yard-Guest-Id, signed in or not. Clients can never spoof these: the edge
+// strips inbound X-Yard-* first, and `yard dev` stamps the same headers
+// locally from the persona you pick.
+//
+// The service is public: a signed-out visitor draws as a guest on Free, and
+// signing in moves the guest's boards to their Yard account.
 //
 // Two things live in this file. The default export is the fetch handler: the
 // board list, membership, sharing, export, and the one route that hands a
@@ -39,6 +44,7 @@ const FLUSH_MS = 5000;
 
 const KINDS = new Set(["note", "rect", "ellipse", "line", "pen", "text"]);
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
+const GUEST_PREFIX = "guest-";
 
 export default {
   async fetch(request, env) {
@@ -52,13 +58,14 @@ export default {
 
     if (url.pathname.startsWith("/api/")) {
       const started = Date.now();
+      const userId = request.headers.get("X-Yard-User-Id");
       try {
         const response = await handleAPI(request, env, url);
         log("request", {
           method: request.method,
           path: redactPath(url.pathname),
           status: response.status,
-          user: shortId(request.headers.get("X-Yard-User-Id")),
+          user: userId ? shortId(userId) : request.headers.get("X-Yard-Guest-Id") ? "guest" : "-",
           ms: Date.now() - started,
         });
         return response;
@@ -79,17 +86,20 @@ export default {
 /* ------------------------------------------------------------------- api */
 
 async function handleAPI(request, env, url) {
-  // The access gate normally guarantees the header; this is the backstop.
-  const user = request.headers.get("X-Yard-User-Id");
+  // A visitor with neither id has not asked for a guest id yet. The app does
+  // that on this 401 and retries.
+  const who = await identity(request.headers);
   const method = request.method;
-  if (!user) {
-    log("auth.rejected", { method, path: url.pathname });
-    return json({ error: "sign in to use Chalk" }, 401);
+  if (!who.id) {
+    log("auth.rejected", { method, path: redactPath(url.pathname) });
+    return json({ error: "sign in or continue as a guest", code: "no_identity" }, 401);
   }
+  if (who.userId && who.guest) await adoptGuest(env, who);
+  const user = who.id;
 
   // Every request refreshes the caller's plan snapshot, so an upgrade,
   // cancellation or expired trial reaches their boards on their next call.
-  const me = await ensureUser(env, request.headers, user);
+  const me = await ensureUser(env, request.headers, who);
 
   // ["api", "boards", "<id>", "ws"]: the leading "api" is dropped.
   const [, ...seg] = url.pathname.split("/").filter(Boolean);
@@ -130,10 +140,60 @@ async function handleAPI(request, env, url) {
 
 /* -------------------------------------------------------------- identity */
 
+// Everyone is keyed by their Yard user id, or by a key derived from their
+// guest id while signed out. The guest id itself is a credential (whoever
+// holds it acts as that guest), and every cursor on a board carries its
+// owner's key to everyone else there, so a guest's key is a hash of it.
+async function identity(headers) {
+  const userId = headers.get("X-Yard-User-Id") || "";
+  const guestId = headers.get("X-Yard-Guest-Id") || "";
+  const guest = guestId ? await guestKey(guestId) : "";
+  return { id: userId || guest, userId, guest, email: headers.get("X-Yard-Email") || "" };
+}
+
+async function guestKey(guestId) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(guestId));
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return GUEST_PREFIX + hex.slice(0, 32);
+}
+
+// A guest who signs in arrives with both ids. Their boards and memberships
+// move to the account, dropping any membership the account no longer needs
+// because it owns or already belongs to that board. The rooms need nothing:
+// a board learns its owner from the next owner who connects.
+async function adoptGuest(env, who) {
+  const { guest, userId } = who;
+  // Every request writes the caller's users row, so a guest without one has
+  // nothing to move.
+  const held = await env.DB.prepare("SELECT 1 FROM users WHERE id = ?1").bind(guest).first();
+  if (!held) return;
+
+  const guestName = defaultName({ userId: "", guest, email: "" });
+  const results = await env.DB.batch([
+    env.DB.prepare("UPDATE boards SET owner_id = ?2 WHERE owner_id = ?1").bind(guest, userId),
+    env.DB.prepare(
+      "DELETE FROM board_members WHERE user_id = ?1 AND (" +
+        " board_id IN (SELECT id FROM boards WHERE owner_id = ?2)" +
+        " OR board_id IN (SELECT board_id FROM board_members WHERE user_id = ?2))",
+    ).bind(guest, userId),
+    env.DB.prepare("UPDATE board_members SET user_id = ?2 WHERE user_id = ?1").bind(guest, userId),
+    env.DB.prepare(
+      "DELETE FROM board_members WHERE user_id = ?1 AND board_id IN (SELECT id FROM boards WHERE owner_id = ?1)",
+    ).bind(userId),
+    env.DB.prepare(
+      "INSERT INTO users (id, name, email, plan, seen_at)" +
+        " SELECT ?2, CASE WHEN name = ?4 THEN ?5 ELSE name END, ?3, plan, ?6 FROM users WHERE id = ?1" +
+        " ON CONFLICT(id) DO NOTHING",
+    ).bind(guest, userId, who.email, guestName, defaultName(who), Date.now()),
+    env.DB.prepare("DELETE FROM users WHERE id = ?1").bind(guest),
+  ]);
+  log("guest.adopt", { user: shortId(userId), boards: changed(results[0]), memberships: changed(results[2]) });
+}
+
 // Pro is the project owner, or a live purchase, subscription or trial of the
 // tier whose key is PRO_TIER. The tier is checked for trials too, so a trial
 // added to some other tier later never unlocks Pro. Anything else, including
-// a signed-in visitor with no purchase at all, is Free. The key survives
+// a guest or a signed-in visitor with no purchase at all, is Free. The key survives
 // renaming the tier in .yard/settings.json; changing the key there means
 // changing PRO_TIER with it.
 function planOf(headers) {
@@ -147,8 +207,7 @@ function planOf(headers) {
 // email and the app lets people change it. The plan is re-snapshotted on
 // every request: that snapshot is what a board reads for its owner's limits
 // while the owner is away.
-async function ensureUser(env, headers, user) {
-  const email = headers.get("X-Yard-Email") || "";
+async function ensureUser(env, headers, who) {
   const entitlement = headers.get("X-Yard-Entitlement") || "none";
   const plan = planOf(headers);
   const row = await env.DB.prepare(
@@ -156,12 +215,16 @@ async function ensureUser(env, headers, user) {
       " ON CONFLICT(id) DO UPDATE SET email = excluded.email, plan = excluded.plan, seen_at = excluded.seen_at" +
       " RETURNING name",
   )
-    .bind(user, defaultName(user, email), email, plan, Date.now())
+    .bind(who.id, defaultName(who), who.email, plan, Date.now())
     .first();
   return {
-    user_id: user,
+    user_id: who.id,
     name: row.name,
-    email,
+    email: who.email,
+    signed_in: !!who.userId,
+    // The guest's boards are the account's now, so the browser can forget
+    // the guest id. A later sign-out starts a fresh guest.
+    forget_guest: !!(who.userId && who.guest),
     plan,
     entitlement,
     tier: headers.get("X-Yard-Tier") || "",
@@ -170,9 +233,10 @@ async function ensureUser(env, headers, user) {
   };
 }
 
-function defaultName(user, email) {
-  const local = (email.split("@")[0] || "").replace(/[^A-Za-z0-9._-]/g, "").slice(0, MAX_NAME);
-  return local || "user-" + shortId(user);
+function defaultName(who) {
+  if (!who.userId) return "Guest " + who.guest.slice(GUEST_PREFIX.length, GUEST_PREFIX.length + 4).toUpperCase();
+  const local = (who.email.split("@")[0] || "").replace(/[^A-Za-z0-9._-]/g, "").slice(0, MAX_NAME);
+  return local || "user-" + shortId(who.userId);
 }
 
 async function renameMe(request, env, me) {
@@ -392,6 +456,7 @@ async function connectBoard(request, env, me, access) {
   for (const key of [...headers.keys()]) {
     if (key.toLowerCase().startsWith("x-chalk-")) headers.delete(key);
   }
+  headers.set("X-Chalk-User", user);
   headers.set("X-Chalk-Board", board.id);
   headers.set("X-Chalk-Board-Name", encodeURIComponent(board.name));
   headers.set("X-Chalk-Link", board.link_access ? "1" : "0");
@@ -479,9 +544,9 @@ export class Board {
   /* connections */
 
   async join(request) {
-    const userId = request.headers.get("X-Yard-User-Id") || "";
-    if (!userId) return new Response("sign in", { status: 401 });
     const h = request.headers;
+    const userId = h.get("X-Chalk-User") || "";
+    if (!userId) return new Response("no identity", { status: 401 });
     const boardId = h.get("X-Chalk-Board") || "";
     const plan = h.get("X-Chalk-Plan") === "pro" ? "pro" : "free";
     const role = h.get("X-Chalk-Role") === "owner" ? "owner" : "editor";

@@ -7,8 +7,8 @@
 A shared whiteboard hosted end to end on Yard: sticky notes, shapes, a pen,
 and everyone's cursor on the same board at the same time. A static frontend,
 a fetch-handler backend, one realtime room per board, a per-project SQLite
-database, and Yard Auth for sign-in. Free for three boards; Pro is a
-subscription.
+database, and Yard Auth for sign-in. No account is needed to draw: a
+signed-out visitor is a guest. Free for three boards; Pro is a subscription.
 
 - Product page: https://tatelax.yard.sh/chalk
 - App: https://tatelax.yard.sh/chalk/app/
@@ -38,7 +38,7 @@ its room type:
 
     "services": [
       { "dir": "app", "name": "app", "url": "/app",
-        "access": "authenticated", "database_access": true,
+        "access": "public", "database_access": true,
         "rooms": [{ "type": "Board", "binding": "BOARDS" }] }
     ]
 
@@ -107,18 +107,28 @@ but it only counts while the owner keeps link sharing on. Turning sharing
 off hides the board from members' lists, refuses their requests, and closes
 their open sockets with code 4003; turning it back on lets them back in.
 
-**Sign in first, then connect.** The service is `authenticated`, so Yard Auth
-signs visitors in (a consent screen the first time, silent after that), and
-the edge answers an anonymous upgrade with a redirect a browser socket cannot
-follow. The app loads as a page, which is where sign-in happens, and only
-opens the socket after `api/me` succeeds.
+**Guests and accounts.** The service is `public`, so nobody is sent to a
+sign-in page. A signed-out visitor asks the edge for a guest id (`POST
+__yard/auth/guest`) when `api/me` answers 401, and from then on every request
+and socket from that browser carries `X-Yard-Guest-Id`. Everyone is keyed by
+their Yard user id, or while signed out by `guest-` and a SHA-256 hash of the
+guest id. The hash matters: the guest id is the guest's credential, and every
+cursor on a board carries its owner's key to everyone else there. Guests are
+on Free. Sign in is in the account menu and comes back to the open board;
+when a guest signs in, both headers arrive and the next request moves the
+guest's boards, memberships and name to the account. The app then forgets the
+guest id (`DELETE __yard/auth/guest`), so signing out later starts a fresh
+guest. The app only opens a board's socket after `api/me` succeeds, so the
+socket always carries one identity or the other.
 
 Two details worth knowing before editing:
 
 - **Relative URLs only.** The app is mounted at `/chalk/app/`, so
   `fetch("api/boards")`, never `/api/boards`, and the socket URL is built
-  from `location.href`. Board selection lives in `location.hash` for the same
-  reason. `yard service check` lints fetches and links, not socket URLs.
+  from `location.href`. The open board is `?board=<id>` for the same reason,
+  and because a sign-in round trip keeps the path and query, so a shared link
+  survives it. Older `#<id>` links still open. `yard service check` lints
+  fetches and links, not socket URLs.
 - **The type name is the identity.** Renaming `Board` in `settings.json`
   deletes every board and its shapes on the next deploy; `yard push` warns
   before it does. Change the `binding` if only the name in `env` should
@@ -145,13 +155,14 @@ the app re-reads `api/me` whenever the window regains focus.
 
 serves the landing page at `http://localhost:9875/chalk/` and the app at
 `http://localhost:9875/chalk/app/`, with the migration applied to a local
-database and the boards' rooms stored under `.yard/dev/rooms/app/`. The
-`authenticated` gate sends you to a persona picker instead of Yard Auth;
-pick one up front with `yard dev --as signed-in` (Free), `--as user:pro`,
-`--as trial`, or `--as member` (the project owner).
+database and the boards' rooms stored under `.yard/dev/rooms/app/`. You
+start as `anonymous`, a guest on Free. Sign-in goes to a persona picker
+instead of Yard Auth; pick one up front with `yard dev --as signed-in` (Free),
+`--as user:pro`, `--as trial`, or `--as member` (the project owner).
 
 To see the realtime part, open the same board in two browser windows (a
-private window gets its own persona), draw in one, and watch the other.
+private window is a second guest, or gets its own persona), draw in one, and
+watch the other.
 
 Every save restarts the local runtime, which drops every open socket; the
 client reconnects on its own, which is the same path it takes when a hosted
@@ -173,7 +184,7 @@ Every line starts with `[chalk]` and is a single event, so it greps cleanly:
     [chalk] flush board=5b1c37d7 shapes=14 ms=3
     [chalk] request method=POST path=/api/boards/5b1c37d7/join status=200 user=05c444a7 ms=4
 
-Handler events: `request`, `auth.rejected`, `me.rename`,
+Handler events: `request`, `auth.rejected`, `guest.adopt`, `me.rename`,
 `board.seed|create|join|rename|share|delete|leave`, `board.join.rejected`,
 `boards.limit`, `export`, `export.denied`, `ws.forward`, `ws.rejected`.
 Room events: `board.wake`, `peer.join|leave|error|rename`, `board.full`, `board.unshared`,

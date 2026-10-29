@@ -577,6 +577,13 @@ body[data-view="list"] .onboard {
   white-space: nowrap;
 }
 
+.menu__note {
+  margin: 0;
+  padding: 0 6px 8px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .menu__item {
   display: flex;
   align-items: center;
@@ -698,6 +705,16 @@ body[data-view="list"] .onboard {
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.05;
+}
+
+.boards__guest {
+  margin: -16px 0 24px;
+  color: var(--muted);
+}
+
+.boards__guest a {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .boards__list {

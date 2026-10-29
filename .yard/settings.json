@@ -7,7 +7,7 @@
       "dir": "app",
       "name": "app",
       "url": "/app",
-      "access": "authenticated",
+      "access": "public",
       "database_access": true,
       "rooms": [
         {

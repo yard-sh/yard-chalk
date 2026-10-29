@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light" />
   <title>Chalk: a shared whiteboard</title>
-  <meta name="description" content="A whiteboard everyone can draw on at the same time. Sticky notes, shapes, pen, and every cursor in the room. Sign in with Yard and start a board." />
+  <meta name="description" content="A whiteboard everyone can draw on at the same time. Sticky notes, shapes, pen, and every cursor in the room. No account needed: start a board and send the link." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" />
@@ -36,7 +36,7 @@
       <div class="nav__cta">
         <!-- Relative links only: the page serves under /<slug>/ (and under
              /<slug>/@<sandbox>/ in a sandbox), so "app/" is always this project's app. -->
-        <a class="link-quiet" data-yard-when="signed_out" href="app/">Sign in</a>
+        <a class="link-quiet" data-yard-when="signed_out" href="app/__yard/auth/login?return=/">Sign in</a>
         <a class="btn btn--primary btn--sm" data-yard-when="signed_out" href="app/">Start free</a>
         <a class="btn btn--primary btn--sm" data-yard-when="signed_in" href="app/">Open your boards</a>
       </div>
@@ -53,7 +53,7 @@
 
       <p class="hero__lede" data-yard="tagline">
         Sticky notes, shapes, a pen, and every cursor in the room. Send the
-        link and people are on the board the moment they sign in. Nothing
+        link and people are on the board the moment they open it. Nothing
         to install, nothing to host.
       </p>
 
@@ -62,7 +62,7 @@
         <a class="btn btn--primary btn--lg" data-yard-when="signed_in" href="app/">Open your boards</a>
         <a class="btn btn--outline btn--lg" href="#pricing">See pricing</a>
       </div>
-      <p class="hero__note">Free for three boards. No card needed.</p>
+      <p class="hero__note">Free for three boards. No account or card needed.</p>
 
       <!-- The argument for a whiteboard is a board you can draw on, with
            someone else drawing too, so the demo is real rather than a picture. -->
@@ -176,7 +176,7 @@
         <div class="feature__copy">
           <span class="kicker kicker--pink">Share</span>
           <h3>Yours until you send the link</h3>
-          <p>A board is private to the person who made it. Turn on link sharing and anyone signed in with the link joins as an editor, and the board shows up in their list too.</p>
+          <p>A board is private to the person who made it. Turn on link sharing and anyone with the link joins as an editor, account or not, and the board shows up in their list too.</p>
         </div>
         <div class="panel panel--pink" aria-hidden="true">
           <div class="mock-share">
@@ -186,7 +186,7 @@
               <span class="mock-toggle"><i></i></span>
             </div>
             <div class="mock-share__link">
-              <span>…yard.sh/chalk/app/#b/launch-plan</span>
+              <span>…yard.sh/chalk/app/?board=launch-plan</span>
               <b>Copy</b>
             </div>
             <div class="mock-share__people">
@@ -230,8 +230,8 @@
       <ol class="steps">
         <li class="step">
           <span class="step__num">1</span>
-          <h3>Sign in</h3>
-          <p>One click with your Yard account. No new password, no setup.</p>
+          <h3>Open Chalk</h3>
+          <p>No account, no setup. Sign in with Yard when you want your boards everywhere.</p>
         </li>
         <li class="step">
           <span class="step__num">2</span>
@@ -264,7 +264,7 @@
             <span class="plan__amount" data-amount>$0</span>
             <span class="plan__per">forever</span>
           </p>
-          <a class="btn btn--outline btn--block" href="app/">Sign in, it's free</a>
+          <a class="btn btn--outline btn--block" href="app/">Start drawing, it's free</a>
           <ul class="plan__features" data-features>
             <li>3 boards</li>
             <li>5 people on a board at once</li>
@@ -325,7 +325,7 @@
     <section class="close">
       <div class="close__inner">
         <h2>Grab a marker.<br />Your team's already here.</h2>
-        <p>Nothing to set up. Sign in and draw.</p>
+        <p>Nothing to set up. Open it and draw.</p>
         <a class="btn btn--dark btn--lg" href="app/">Open Chalk</a>
       </div>
       <svg class="close__doodle close__doodle--a" viewBox="0 0 120 120" aria-hidden="true"><path d="M10 70 C 30 10, 90 10, 108 60 S 60 118, 40 90" /></svg>

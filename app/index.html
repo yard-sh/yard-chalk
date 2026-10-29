@@ -24,7 +24,7 @@
 
     <header class="topbar">
       <div class="topbar__group">
-        <a class="wordmark" href="#" title="All boards">
+        <a class="wordmark" href="./" data-route title="All boards">
           <span class="wordmark__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           Chalk
         </a>
@@ -54,26 +54,28 @@
               <span class="badge small" id="plan-badge" data-plan="free">Free</span>
               <span class="menu__email" id="account-email"></span>
             </div>
+            <p class="menu__note small" id="account-guest" hidden>Sign in to keep your boards on every device.</p>
             <div class="menu__rule"></div>
             <a class="menu__item" id="account-upgrade" href="../">Upgrade to Pro</a>
-            <!-- Signs out at the project root and lands on the landing page;
-                 back at the app, the Yard session would sign them straight in. -->
-            <a class="menu__item" href="../__yard/auth/logout?return=/">Sign out</a>
+            <a class="menu__item" id="account-auth" href="__yard/auth/login">Sign in</a>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- The board list. Shown when the hash is empty. -->
+    <!-- The board list. Shown when no board is open. -->
     <section class="boards" id="boards" hidden>
       <div class="boards__head">
         <h1 class="boards__title">Your boards</h1>
         <button class="button button--primary" id="new-board">New board</button>
       </div>
+      <p class="boards__guest" id="guest-hint" hidden>
+        You're drawing as a guest. <a id="guest-signin" href="__yard/auth/login">Sign in</a> to keep your boards on every device.
+      </p>
       <div class="boards__list" id="board-list"></div>
     </section>
 
-    <!-- The open board. Shown when the hash names one. -->
+    <!-- The open board. Shown when ?board= names one. -->
     <main class="workspace" id="workspace" hidden>
       <div class="rail" role="toolbar" aria-label="Tools" aria-orientation="vertical">
         <button class="tool" data-tool="select" aria-pressed="true" title="Select (V)" aria-label="Select">
@@ -157,7 +159,7 @@
           <input class="linkrow__field small" id="share-link" readonly aria-label="Board link" />
           <button class="button" id="share-copy">Copy link</button>
         </div>
-        <p class="sheet__note">People still sign in with Yard, so every cursor has a name.</p>
+        <p class="sheet__note">No account needed: people without one join as guests, and every cursor has a name.</p>
       </div>
     </div>
 
