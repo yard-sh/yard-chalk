@@ -92,7 +92,7 @@ link sharing) lives in the database; the shapes never leave the room.
 handler reads the owner's snapshot when someone else connects (the owner's
 own connection uses their live headers). Board limits (boards owned, people
 at once, shapes) follow the owner; export follows the person exporting. Pro
-is the project owner (`X-Yard-Entitlement: owner`), or an `active` or
+is the project's team (`X-Yard-Entitlement: team`), or an `active` or
 `trial` entitlement whose `X-Yard-Tier-Key` is `pro`; everything else is
 Free. The tier's key is the `PRO_TIER` constant in `_service.js`. Renaming
 the tier in `settings.json` changes nothing, but changing its `key` means
@@ -158,7 +158,7 @@ serves the landing page at `http://localhost:9875/chalk/` and the app at
 database and the boards' rooms stored under `.yard/dev/rooms/app/`. You
 start as `anonymous`, a guest on Free. Sign-in goes to a persona picker
 instead of Yard Auth; pick one up front with `yard dev --as signed-in` (Free),
-`--as user:pro`, `--as trial`, or `--as member` (the project owner).
+`--as user:pro`, `--as trial`, or `--as team` (a team member).
 
 To see the realtime part, open the same board in two browser windows (a
 private window is a second guest, or gets its own persona), draw in one, and

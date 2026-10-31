@@ -190,7 +190,7 @@ async function adoptGuest(env, who) {
   log("guest.adopt", { user: shortId(userId), boards: changed(results[0]), memberships: changed(results[2]) });
 }
 
-// Pro is the project owner, or a live purchase, subscription or trial of the
+// Pro is the project's team, or a live purchase, subscription or trial of the
 // tier whose key is PRO_TIER. The tier is checked for trials too, so a trial
 // added to some other tier later never unlocks Pro. Anything else, including
 // a guest or a signed-in visitor with no purchase at all, is Free. The key survives
@@ -198,7 +198,7 @@ async function adoptGuest(env, who) {
 // changing PRO_TIER with it.
 function planOf(headers) {
   const entitlement = headers.get("X-Yard-Entitlement") || "none";
-  if (entitlement === "owner") return "pro";
+  if (entitlement === "team") return "pro";
   if (entitlement !== "active" && entitlement !== "trial") return "free";
   return headers.get("X-Yard-Tier-Key") === PRO_TIER ? "pro" : "free";
 }
