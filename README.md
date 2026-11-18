@@ -47,11 +47,9 @@ service deploys is an edit there followed by a push.
 
 The marketing page is declared on the same file:
 
-    "landing_page": { "type": "custom", "dir": "landing-page" }
+    "landing_page": { "dir": "landing-page" }
 
-`"type": "custom"` is what serves the files in that directory. Set it to
-`"default"` and the project shows the default page you edit in the
-dashboard instead; the files still upload, they are just not served.
+The files in that directory are the project's landing page.
 
 ## How it fits together
 
