@@ -45,11 +45,12 @@ its room type:
 `yard push` sends that file along with the bundles, so changing how the
 service deploys is an edit there followed by a push.
 
-The marketing page is declared on the same file:
+The marketing page is the service at `/`, the first entry on the same list:
 
-    "landing_page": { "dir": "landing-page" }
+      { "dir": "landing-page", "name": "landing-page", "url": "/" }
 
-The files in that directory are the project's landing page.
+The files in that directory are the project's landing page. It has no
+`_service.js`, so it is served as static files.
 
 ## How it fits together
 
